@@ -65,8 +65,7 @@
           echo "  sdr-verify-ptp --help"
           echo "  sdr-waterfall --help"  
           echo "  sdr-measure-delay --help"
-          echo "  python -m kitty_graphics.test"
-          echo "  python -m example.demo --help"
+          echo "  sdr-kitty-test"
           echo ""
           
           # Unset PYTHONPATH to avoid conflicts

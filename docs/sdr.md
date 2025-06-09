@@ -194,7 +194,7 @@ For 100 meters:
 Time = 100m / (3×10⁸ m/s) = 333 nanoseconds
 ```
 
-### 4. `kitty_test.py` - Terminal Graphics Test
+### 4. `sdr-kitty-test` - Terminal Graphics Test
 
 **What it does**: Tests if your terminal supports advanced graphics for visualization
 

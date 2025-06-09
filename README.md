@@ -47,6 +47,7 @@ That's it! You now have a complete SDR development environment with all dependen
 sdr-verify-ptp --help
 sdr-waterfall --help
 sdr-measure-delay --help
+sdr-kitty-test
 
 # Test with a remote SDR device (if you have one)
 sdr-verify-ptp --args "remote=tcp://your-sdr-server:2500"
@@ -64,19 +65,20 @@ sdr_exp/
 ├── flake.nix                # Nix environment definition
 ├── pyproject.toml           # Python project configuration
 └── src/
+    ├── kitty_graphics/      # Terminal graphics utilities
+    │   ├── protocol.py      # Kitty graphics protocol implementation
+    │   └── test.py          # Graphics support testing
     └── sdr_experiments/     # Main package
         ├── core/            # Core SDR functionality
         │   ├── device.py    # Device management utilities
         │   ├── logging.py   # SoapySDR logging utilities
         │   └── signal.py    # Signal processing functions
         ├── graphics/        # Visualization and graphics
-        │   ├── kitty.py     # Kitty terminal graphics protocol
         │   └── waterfall.py # Waterfall display classes
         ├── tools/           # Command-line tools
         │   ├── verify_ptp.py    # PTP clock synchronization tester
         │   ├── waterfall_tool.py # Real-time spectrum waterfall
-        │   ├── measure_delay.py  # RF propagation delay measurement
-        │   └── kitty_test.py     # Terminal graphics test
+        │   └── measure_delay.py  # RF propagation delay measurement
         └── utils.py         # General utilities
 ```
 
@@ -91,12 +93,17 @@ sdr_exp/
 
 2. **`sdr-waterfall`** - Real-time spectrum visualization
    ```bash
-   sdr-waterfall --args "driver=hackrf" --freq 100e6
+   sdr-waterfall --args "driver=hackrf" --freq 100e6 --rate 10e6
    ```
 
 3. **`sdr-measure-delay`** - Measures signal propagation delays
    ```bash
    sdr-measure-delay --help
+   ```
+
+4. **`sdr-kitty-test`** - Terminal graphics test
+   ```bash
+   sdr-kitty-test
    ```
 
 ### Supported Hardware
@@ -135,25 +142,29 @@ The project follows a clean, modular architecture:
 - **`core.logging`** - SoapySDR logging and PTP detection
 
 ### **Graphics Modules**  
-- **`graphics.kitty`** - Kitty terminal graphics protocol
+- **`kitty_graphics`** - Kitty terminal graphics protocol (separate package)
 - **`graphics.waterfall`** - Real-time waterfall visualization classes
 
 ### **Tools**
 - **`tools.verify_ptp`** - PTP clock verification utility
 - **`tools.waterfall_tool`** - Spectrum waterfall display
 - **`tools.measure_delay`** - RF propagation delay measurement
-- **`tools.kitty_test`** - Terminal graphics testing
+- **`kitty_graphics.test`** - Terminal graphics testing
 
 ### **Using as a Library**
 
 You can also import and use the modules directly in your own scripts:
 
 ```python
-from sdr_experiments import setup_sdr_device, WaterfallDisplay
+from sdr_experiments import setup_sdr_device, WaterfallDisplay, get_device_info
 from sdr_experiments.core.signal import compute_psd_db
 
 # Setup device
 sdr = setup_sdr_device("driver=hackrf", sample_rate=10e6, center_freq=100e6)
+
+# Get device information
+info = get_device_info(sdr)
+print(f"Device: {info['driver']} - {info['hardware']}")
 
 # Create waterfall display
 waterfall = WaterfallDisplay(fft_size=1024)
