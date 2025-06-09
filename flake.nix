@@ -34,6 +34,9 @@
           git
           # Graphics support
           kitty
+
+          # ptp
+          linuxptp
         ];
 
         env = {

@@ -3,6 +3,7 @@ import numpy as np
 import time
 import argparse # Added argparse
 from ..core.logging import SoapyLogHandler
+from ..core.timing import get_ptp_time_ns, get_realtime_ns, get_monotonic_ns, compare_clocks
 
 def verify_clock_source(device_args_str, sample_rate_hz, frequency_hz):
     # Create log handler instance
