@@ -1,1 +1,9 @@
 __pycache__/
+**/__pycache__/
+src/sdr_experiments/__pycache__
+sdr_experiments.egg-info/requires.txt
+sdr_experiments.egg-info/top_level.txt
+sdr_experiments.egg-info/SOURCES.txt
+sdr_experiments.egg-info/entry_points.txt
+sdr_experiments.egg-info/dependency_links.txt
+sdr_experiments.egg-info/PKG-INFO

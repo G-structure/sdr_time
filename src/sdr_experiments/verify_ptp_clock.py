@@ -2,32 +2,22 @@ import SoapySDR
 import numpy as np
 import time
 import argparse # Added argparse
-
-# Global flag to store if PTP mode was logged
-ptp_mode_logged = False
-monotonic_fallback_logged = False
-tai_failed_logged = False
-
-def soapy_log_handle(level, message):
-    global ptp_mode_logged, monotonic_fallback_logged, tai_failed_logged
-    # print(f"DEBUG: Log level type: {type(level)}, value: {level}") # Uncomment for debugging log level
-    try:
-        level_str = SoapySDR.SoapySDR_logLevelToString(level)
-    except AttributeError:
-        level_str = str(level) # Fallback if conversion function not found
-    log_str = f"SoapyLOG: [{level_str}] {message}"
-    print(log_str)
-    if "Using PTP clock /dev/ptp0" in message:
-        ptp_mode_logged = True
-    if "Falling back to monotonic clock" in message:
-        monotonic_fallback_logged = True
-    if "clock_gettime(CLOCK_TAI) failed" in message:
-        tai_failed_logged = True
+from .soapy_log_handle import SoapyLogHandler
 
 def verify_clock_source(device_args_str, sample_rate_hz, frequency_hz):
-    global ptp_mode_logged, monotonic_fallback_logged, tai_failed_logged
+    # Create log handler instance
+    log_handler = SoapyLogHandler()
+    
+    def soapy_log_callback(level, message):
+        log_handler.log_handler(level, message)
+        # Also print the message for visibility
+        try:
+            level_str = SoapySDR.SoapySDR_logLevelToString(level)
+        except AttributeError:
+            level_str = str(level)
+        print(f"SoapyLOG: [{level_str}] {message}")
 
-    # SoapySDR.registerLogHandler(soapy_log_handle) # Registering from main to catch early logs
+    # SoapySDR.registerLogHandler(soapy_log_callback) # Registering from main to catch early logs
     # SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_DEBUG)
 
     NUM_SAMPLES_PER_BUFFER = 1024 * 16 # Number of samples per readStream call
@@ -117,6 +107,12 @@ def verify_clock_source(device_args_str, sample_rate_hz, frequency_hz):
             print("Device closed.")
 
         print("\n--- Log Summary ---")
+        
+        # Get log status from handler
+        ptp_mode_logged = log_handler.ptp_mode_logged
+        monotonic_fallback_logged = log_handler.monotonic_fallback_logged
+        tai_failed_logged = log_handler.tai_failed_logged
+        
         if ptp_mode_logged and not monotonic_fallback_logged and not tai_failed_logged:
             print("SUCCESS: Driver logged intention to use PTP clock, and no fallback messages for PTP were observed.")
             print("         Timestamps should be large (epoch-like) if PTP (via CLOCK_TAI) is working correctly.")
@@ -148,7 +144,18 @@ def main():
 
     options = parser.parse_args()
 
-    SoapySDR.registerLogHandler(soapy_log_handle) # Register log handler early
+    # Create global log handler for early messages
+    global_handler = SoapyLogHandler()
+    
+    def global_log_callback(level, message):
+        global_handler.log_handler(level, message)
+        try:
+            level_str = SoapySDR.SoapySDR_logLevelToString(level)
+        except AttributeError:
+            level_str = str(level)
+        print(f"SoapyLOG: [{level_str}] {message}")
+
+    SoapySDR.registerLogHandler(global_log_callback) # Register log handler early
     if options.debug:
         SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_DEBUG)
     else:

@@ -62,8 +62,9 @@ Documentation = "https://sdr-experiments.readthedocs.io"
 
 [project.scripts]
 sdr-waterfall = "sdr_experiments.waterfall:main"
-sdr-measure-delay = "sdr_experiments.measure_delay:main"
+sdr-measure-delay = "sdr_experiments.MeasureDelay:main"
 sdr-verify-ptp = "sdr_experiments.verify_ptp_clock:main"
+sdr-kitty-test = "sdr_experiments.kitty_test:main"
 
 # Build system configuration (PEP 518)
 [build-system]

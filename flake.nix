@@ -58,9 +58,9 @@
           echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
           echo ""
           echo "Ready to run:"
-          echo "  python verify_ptp_clock.py"
-          echo "  python waterfall.py"
-          echo "  python MeasureDelay.py"
+          echo "  sdr-verify-ptp --help"
+          echo "  sdr-waterfall --help"  
+          echo "  sdr-measure-delay --help"
           echo ""
           
           # Unset PYTHONPATH to avoid conflicts
