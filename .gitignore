@@ -1,10 +1,68 @@
+# Python bytecode
 __pycache__/
-**/__pycache__/
-src/sdr_experiments/__pycache__
-sdr_experiments.egg-info/requires.txt
-sdr_experiments.egg-info/top_level.txt
-sdr_experiments.egg-info/SOURCES.txt
-sdr_experiments.egg-info/entry_points.txt
-sdr_experiments.egg-info/dependency_links.txt
-sdr_experiments.egg-info/PKG-INFO
-src/sdr_experiments/_version.py
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.tox/
+.coverage
+.pytest_cache/
+htmlcov/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Documentation
+docs/_build/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log

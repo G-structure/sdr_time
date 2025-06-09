@@ -46,8 +46,8 @@ viz = [
 
 # Hardware-specific drivers
 hardware = [
-    "pyrtlsdr>=0.2.9",  # RTL-SDR support
-    "pyuhd>=4.4.0",     # USRP support (if available)
+    # "pyrtlsdr>=0.2.9",  # RTL-SDR support
+    # "pyuhd>=4.4.0",     # USRP support (if available)
 ]
 
 # All optional dependencies
@@ -68,23 +68,19 @@ sdr-kitty-test = "sdr_experiments.tools.kitty_test:main"
 
 # Build system configuration (PEP 518)
 [build-system]
-requires = [
-    "setuptools>=68.0.0",
-    "wheel>=0.40.0",
-    "setuptools-scm>=7.0.0",
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Hatchling configuration
+[tool.hatch.build.targets.wheel]
+packages = ["src/sdr_experiments"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/pyproject.toml",
 ]
-build-backend = "setuptools.build_meta"
-
-# Setuptools configuration
-[tool.setuptools]
-packages = ["sdr_experiments"]
-
-[tool.setuptools.package-dir]
-sdr_experiments = "src/sdr_experiments"
-
-# Dynamic versioning with setuptools-scm
-[tool.setuptools_scm]
-write_to = "src/sdr_experiments/_version.py"
 
 # Development tools configuration
 [tool.black]

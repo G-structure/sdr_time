@@ -4,11 +4,13 @@ SDR Experiments Package
 A collection of Software Defined Radio experiments and tools.
 """
 
+import importlib.metadata
+
 try:
-    from ._version import version as __version__
-except ImportError:
-    # Version not available when not installed via setuptools-scm
-    __version__ = "unknown"
+    __version__ = importlib.metadata.version("sdr-experiments")
+except importlib.metadata.PackageNotFoundError:
+    # Package is not installed, use development version
+    __version__ = "0.1.0-dev"
 
 __author__ = "SDR Team"
 __email__ = "team@example.com"
