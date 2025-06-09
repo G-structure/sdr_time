@@ -7,3 +7,4 @@ sdr_experiments.egg-info/SOURCES.txt
 sdr_experiments.egg-info/entry_points.txt
 sdr_experiments.egg-info/dependency_links.txt
 sdr_experiments.egg-info/PKG-INFO
+src/sdr_experiments/_version.py
