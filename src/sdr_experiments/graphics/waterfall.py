@@ -7,7 +7,7 @@ import numpy as np
 from collections import deque
 from typing import Optional
 
-from .kitty import display_current_plt_figure_kitty_adapted, is_kitty_terminal
+from kitty_graphics import display_current_plt_figure_kitty_adapted, is_kitty_terminal
 from ..core.signal import compute_psd_db
 
 

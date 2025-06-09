@@ -57,15 +57,21 @@
           echo "  - NumPy: $(python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
           echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
           echo ""
+          echo "Available packages (src/):"
+          echo "  - sdr_experiments (main SDR tools)"
+          echo "  - kitty_graphics (terminal graphics)"
+          echo ""
           echo "Ready to run:"
           echo "  sdr-verify-ptp --help"
           echo "  sdr-waterfall --help"  
           echo "  sdr-measure-delay --help"
+          echo "  python -m kitty_graphics.test"
+          echo "  python -m example.demo --help"
           echo ""
           
           # Unset PYTHONPATH to avoid conflicts
           unset PYTHONPATH
-          export PYTHONPATH="$PWD:$PYTHONPATH"
+          export PYTHONPATH="$PWD/src:$PYTHONPATH"
         '';
       };
   };

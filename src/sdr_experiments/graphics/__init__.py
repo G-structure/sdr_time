@@ -4,7 +4,7 @@ Graphics and visualization utilities.
 This module contains tools for displaying SDR data using various output methods.
 """
 
-from .kitty import (
+from kitty_graphics import (
     serialize_gr_command,
     write_chunked, 
     display_current_plt_figure_kitty_adapted,

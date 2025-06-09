@@ -25,7 +25,7 @@ from .core.logging import SoapyLogHandler
 from .core.signal import generate_cf32_pulse, normalize_samples, compute_psd_db
 from .core.device import setup_sdr_device, get_device_info
 from .graphics.waterfall import WaterfallDisplay
-from .graphics.kitty import is_kitty_terminal
+from kitty_graphics import is_kitty_terminal
 
 __all__ = [
     "__version__",

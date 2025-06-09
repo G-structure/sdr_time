@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 from ..graphics.waterfall import WaterfallDisplay
-from ..graphics.kitty import is_kitty_terminal
+from kitty_graphics import is_kitty_terminal
 from ..core.logging import SoapyLogHandler
 
 def run_waterfall(device_args_str, sample_rate_hz, frequency_hz, gain_db):
