@@ -100,7 +100,7 @@ def verify_clock_source(device_args_str, sample_rate_hz, frequency_hz):
             
             time.sleep(0.05) # Small delay between reads
 
-    except SoapySDR.RuntimeException as e: # Trying SoapySDR.RuntimeException
+    except RuntimeError as e: # SoapySDR errors are typically RuntimeError
         print(f"SoapySDR Runtime Error: {e}")
     except AttributeError as e: # Catch attribute errors for SoapySDR specific types if not found
         print(f"SoapySDR (or other) AttributeError: {e}")

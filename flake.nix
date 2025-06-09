@@ -26,6 +26,7 @@
           uv
           # SDR tools
           soapysdr-with-plugins
+          soapyremote
           hackrf
           rtl-sdr
           uhd
@@ -41,7 +42,7 @@
           UV_PYTHON = "${pythonEnv}/bin/python";
           
           # SDR library paths
-          SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8";
+          SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8-3";
           
           # Terminal support
           TERM = "xterm-kitty";
