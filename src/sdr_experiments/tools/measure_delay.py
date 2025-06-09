@@ -11,13 +11,8 @@ import numpy as np
 
 import SoapySDR
 from SoapySDR import * #SOAPY_SDR_ constants
-import soapy_log_handle
-
-def generate_cf32_pulse(num_samps, width=5, scale_factor=0.3):
-    """Create a sinc pulse."""
-    rel_time = np.linspace(-width, width, num_samps)
-    pulse = np.sinc(rel_time).astype(np.complex64)
-    return pulse * scale_factor
+from ..core.signal import generate_cf32_pulse, normalize_samples
+from ..core.device import setup_sdr_device
 
 def measure_delay(
         args,
@@ -183,15 +178,8 @@ def measure_delay(
         rx_buffs[i] = rx_mean
 
     #normalize the samples
-    def normalize(samps):
-        samps = samps - np.mean(samps) #remove dc
-        samps = np.absolute(samps) #magnitude
-        samps = samps / max(samps) #norm ampl to peak
-        #print samps[:100]
-        return samps
-
-    tx_pulse_norm = normalize(tx_pulse)
-    rx_buffs_norm = normalize(rx_buffs)
+    tx_pulse_norm = normalize_samples(tx_pulse)
+    rx_buffs_norm = normalize_samples(rx_buffs)
 
     #dump debug samples
     if dump_dir is not None:
@@ -243,11 +231,7 @@ def main():
 
     options = parser.parse_args()
 
-    if options.abort_on_error:
-        exception_level = SOAPY_SDR_ERROR
-    else:
-        exception_level = None
-    soapy_log_handle.set_python_log_handler(exception_level=exception_level)
+    # Configure logging
     if options.debug:
         SoapySDR.setLogLevel(SOAPY_SDR_DEBUG)
 

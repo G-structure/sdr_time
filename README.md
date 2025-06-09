@@ -65,11 +65,19 @@ sdr_exp/
 ├── pyproject.toml           # Python project configuration
 └── src/
     └── sdr_experiments/     # Main package
-        ├── verify_ptp_clock.py  # PTP clock synchronization tester
-        ├── waterfall.py         # Real-time spectrum waterfall
-        ├── MeasureDelay.py      # RF propagation delay measurement
-        ├── kitty_test.py        # Terminal graphics test
-        └── soapy_log_handle.py  # SoapySDR logging utilities
+        ├── core/            # Core SDR functionality
+        │   ├── device.py    # Device management utilities
+        │   ├── logging.py   # SoapySDR logging utilities
+        │   └── signal.py    # Signal processing functions
+        ├── graphics/        # Visualization and graphics
+        │   ├── kitty.py     # Kitty terminal graphics protocol
+        │   └── waterfall.py # Waterfall display classes
+        ├── tools/           # Command-line tools
+        │   ├── verify_ptp.py    # PTP clock synchronization tester
+        │   ├── waterfall_tool.py # Real-time spectrum waterfall
+        │   ├── measure_delay.py  # RF propagation delay measurement
+        │   └── kitty_test.py     # Terminal graphics test
+        └── utils.py         # General utilities
 ```
 
 ## 🛠️ Available Tools
@@ -116,6 +124,45 @@ sdr_exp/
 1. Look at the existing scripts as examples
 2. Add your own experiments to the project
 3. Use the established patterns for device handling
+
+## 🏗️ Architecture
+
+The project follows a clean, modular architecture:
+
+### **Core Modules**
+- **`core.device`** - SDR device management and configuration
+- **`core.signal`** - Signal processing algorithms (FFT, correlation, etc.)
+- **`core.logging`** - SoapySDR logging and PTP detection
+
+### **Graphics Modules**  
+- **`graphics.kitty`** - Kitty terminal graphics protocol
+- **`graphics.waterfall`** - Real-time waterfall visualization classes
+
+### **Tools**
+- **`tools.verify_ptp`** - PTP clock verification utility
+- **`tools.waterfall_tool`** - Spectrum waterfall display
+- **`tools.measure_delay`** - RF propagation delay measurement
+- **`tools.kitty_test`** - Terminal graphics testing
+
+### **Using as a Library**
+
+You can also import and use the modules directly in your own scripts:
+
+```python
+from sdr_experiments import setup_sdr_device, WaterfallDisplay
+from sdr_experiments.core.signal import compute_psd_db
+
+# Setup device
+sdr = setup_sdr_device("driver=hackrf", sample_rate=10e6, center_freq=100e6)
+
+# Create waterfall display
+waterfall = WaterfallDisplay(fft_size=1024)
+
+# Process samples
+samples = get_samples_from_sdr()  # Your code here
+waterfall.add_samples(samples)
+waterfall.update_display()
+```
 
 ## 🔧 Adding Dependencies
 

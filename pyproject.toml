@@ -61,10 +61,10 @@ Repository = "https://github.com/example/sdr-experiments"
 Documentation = "https://sdr-experiments.readthedocs.io"
 
 [project.scripts]
-sdr-waterfall = "sdr_experiments.waterfall:main"
-sdr-measure-delay = "sdr_experiments.MeasureDelay:main"
-sdr-verify-ptp = "sdr_experiments.verify_ptp_clock:main"
-sdr-kitty-test = "sdr_experiments.kitty_test:main"
+sdr-waterfall = "sdr_experiments.tools.waterfall_tool:main"
+sdr-measure-delay = "sdr_experiments.tools.measure_delay:main"
+sdr-verify-ptp = "sdr_experiments.tools.verify_ptp:main"
+sdr-kitty-test = "sdr_experiments.tools.kitty_test:main"
 
 # Build system configuration (PEP 518)
 [build-system]

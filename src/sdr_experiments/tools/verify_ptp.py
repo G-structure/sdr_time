@@ -2,7 +2,7 @@ import SoapySDR
 import numpy as np
 import time
 import argparse # Added argparse
-from .soapy_log_handle import SoapyLogHandler
+from ..core.logging import SoapyLogHandler
 
 def verify_clock_source(device_args_str, sample_rate_hz, frequency_hz):
     # Create log handler instance
