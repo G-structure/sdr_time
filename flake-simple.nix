@@ -1,0 +1,71 @@
+{
+  description = "SDR Python Development Environment (Simple)";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
+
+  outputs = { self, nixpkgs, ... }: {
+    devShells.x86_64-linux.default = 
+      let
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        
+        # Create Python environment with SDR packages
+        pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+          soapysdr
+          numpy
+          matplotlib
+          scipy
+        ]);
+        
+      in pkgs.mkShell {
+        name = "sdr-dev-shell";
+        
+        packages = with pkgs; [
+          pythonEnv
+          uv
+          # SDR tools
+          soapysdr-with-plugins
+          hackrf
+          rtl-sdr
+          uhd
+          # Development tools
+          git
+          # Graphics support
+          kitty
+        ];
+
+        env = {
+          # UV configuration
+          UV_PYTHON_DOWNLOADS = "never";
+          UV_PYTHON = "${pythonEnv}/bin/python";
+          
+          # SDR library paths
+          SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8";
+          
+          # Terminal support
+          TERM = "xterm-kitty";
+        };
+
+        shellHook = ''
+          echo "🔬 SDR Development Environment (Simple)"
+          echo "Python: ${pythonEnv}/bin/python"
+          echo ""
+          echo "Testing packages:"
+          echo "  - SoapySDR: $(python -c "import SoapySDR; print('✓')" 2>/dev/null || echo "✗")"
+          echo "  - NumPy: $(python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
+          echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
+          echo ""
+          echo "Ready to run:"
+          echo "  python verify_ptp_clock.py"
+          echo "  python waterfall.py"
+          echo "  python MeasureDelay.py"
+          echo ""
+          
+          # Unset PYTHONPATH to avoid conflicts
+          unset PYTHONPATH
+          export PYTHONPATH="$PWD:$PYTHONPATH"
+        '';
+      };
+  };
+} 

@@ -1,0 +1,395 @@
+{
+  description = "SDR Python Development Environment with uv2nix";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    uv2nix = {
+      url = "github:pyproject-nix/uv2nix";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pyproject-build-systems = {
+      url = "github:pyproject-nix/build-system-pkgs";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.uv2nix.follows = "uv2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = {
+    self,
+    nixpkgs,
+    uv2nix,
+    pyproject-nix,
+    pyproject-build-systems,
+    ...
+  }: let
+    inherit (nixpkgs) lib;
+    
+    # Supported systems for this project
+    supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+    
+    # Helper to generate outputs for all supported systems
+    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    
+    # Project-specific configuration
+    projectConfig = {
+      name = "sdr-experiments";
+      pythonVersion = "python312"; # Use Python 3.12
+    };
+
+  in {
+    # Development shells for each system
+    devShells = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      python = pkgs.${projectConfig.pythonVersion};
+      
+      # System dependencies required for SDR work and C compilation
+      systemDeps = with pkgs; [
+        # SDR Libraries
+        soapysdr-with-plugins
+        hackrf
+        rtl-sdr
+        uhd
+        gnuradio
+        
+        # Build tools and compilers
+        gcc
+        clang
+        cmake
+        ninja
+        pkg-config
+        
+        # Development tools
+        uv
+        git
+        
+        # Graphics and visualization dependencies
+        xorg.libX11
+        xorg.libXext
+        xorg.libXrender
+        xorg.libXrandr
+        freetype
+        fontconfig
+        
+        # Terminal and display
+        kitty
+      ];
+
+      # Base Python package set from pyproject-nix
+      baseSet = pkgs.callPackage pyproject-nix.build.packages {
+        inherit python;
+      };
+
+      # Load uv workspace if pyproject.toml exists
+      workspace = 
+        if builtins.pathExists ./pyproject.toml 
+        then uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; }
+        else null;
+
+      # Create overlay for uv-managed dependencies
+      uvOverlay = if workspace != null 
+        then workspace.mkPyprojectOverlay {
+          sourcePreference = "wheel"; # Prefer wheels for better compatibility
+        }
+        else (_final: _prev: {});
+
+      # Custom overrides for C-compiled packages and SDR-specific needs
+      customOverrides = final: prev: {
+        # SoapySDR Python bindings with proper C library linking
+        soapysdr = prev.soapysdr.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [ pkgs.soapysdr ];
+          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.pkg-config ];
+        });
+
+        # NumPy with optimized BLAS
+        numpy = prev.numpy.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [ pkgs.openblas ];
+          env = (old.env or {}) // {
+            NPY_NUM_BUILD_JOBS = toString (builtins.min 16 pkgs.stdenv.hostPlatform.darwinMinVersion or 8);
+          };
+        });
+
+        # Matplotlib with proper backend support
+        matplotlib = prev.matplotlib.overrideAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ (with pkgs; [
+            freetype
+            fontconfig
+            xorg.libX11
+            xorg.libXext
+          ]);
+        });
+
+        # Add any custom packages needed for SDR work
+        # Example for custom packages:
+        # my-sdr-package = final.callPackage ./nix/packages/my-sdr-package.nix {};
+      };
+
+      # Construct the Python package set with all overlays
+      pythonSet = baseSet.overrideScope (
+        lib.composeManyExtensions [
+          pyproject-build-systems.overlays.default
+          uvOverlay
+          customOverrides
+        ]
+      );
+
+    in let
+      # Create a Python environment with the required packages
+      pythonEnv = python.withPackages (ps: with ps; [
+        soapysdr
+        numpy
+        matplotlib
+      ]);
+    in {
+      # Default development shell with uv for mixed development
+      default = pkgs.mkShell {
+        name = "${projectConfig.name}-dev-shell";
+        
+        packages = systemDeps ++ [
+          pythonEnv
+        ];
+
+        env = {
+          # UV configuration
+          UV_PYTHON_DOWNLOADS = "never";
+          UV_PYTHON = python.interpreter;
+          
+          # SDR library paths
+          SOAPY_SDR_PLUGIN_PATH = lib.makeSearchPath "lib/SoapySDR/modules" [
+            pkgs.soapysdr-with-plugins
+          ];
+          
+          # Graphics and display
+          DISPLAY = ":0";
+          
+          # Terminal support
+          TERM = "xterm-kitty";
+        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+          # Linux-specific library paths for Python C extensions
+          LD_LIBRARY_PATH = lib.makeLibraryPath (systemDeps ++ [
+            pkgs.stdenv.cc.cc.lib
+            pkgs.zlib
+            pkgs.pythonManylinuxPackages.manylinux1
+          ]);
+        };
+
+        shellHook = ''
+          echo "🔬 SDR Development Environment"
+          echo "Python: ${pythonEnv}/bin/python"
+          echo "UV available: $(command -v uv)"
+          echo ""
+          echo "System packages provided by Nix:"
+          echo "  - SoapySDR: $(${pythonEnv}/bin/python -c "import SoapySDR; print('✓')" 2>/dev/null || echo "✗")"
+          echo "  - NumPy: $(${pythonEnv}/bin/python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
+          echo "  - Matplotlib: $(${pythonEnv}/bin/python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
+          echo ""
+          echo "Usage:"
+          echo "  python waterfall.py           # Run scripts directly with python"
+          echo "  python MeasureDelay.py        # All SDR dependencies are available"
+          echo ""
+          echo "For additional packages:"
+          echo "  uv add scipy pandas           # Add pure Python packages with uv"
+          echo "  # Note: C-compiled packages (soapysdr, numpy, etc.) are provided by Nix"
+          echo ""
+          
+          # Unset PYTHONPATH to avoid conflicts
+          unset PYTHONPATH
+          
+          # Add current directory to Python path for local modules
+          export PYTHONPATH="$PWD:$PYTHONPATH"
+          
+          # Use the Nix Python environment
+          export PATH="${pythonEnv}/bin:$PATH"
+        '';
+      };
+
+      # Impure development shell - recommended for uv workflow
+      impure = pkgs.mkShell {
+        name = "${projectConfig.name}-impure-shell";
+        
+        packages = [
+          pythonEnv
+          pkgs.uv
+        ] ++ systemDeps;
+
+        env = {
+          # Prevent uv from managing Python downloads
+          UV_PYTHON_DOWNLOADS = "never";
+          # Force uv to use nixpkgs Python interpreter
+          UV_PYTHON = python.interpreter;
+          
+          # SDR library paths
+          SOAPY_SDR_PLUGIN_PATH = lib.makeSearchPath "lib/SoapySDR/modules" [
+            pkgs.soapysdr-with-plugins
+          ];
+          
+          # Graphics and display
+          DISPLAY = ":0";
+          TERM = "xterm-kitty";
+        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+          # Python libraries often load native shared objects using dlopen(3).
+          # Setting LD_LIBRARY_PATH makes the dynamic library loader aware of libraries without using RPATH for lookup.
+          LD_LIBRARY_PATH = lib.makeLibraryPath (systemDeps ++ [
+            pkgs.stdenv.cc.cc.lib
+            pkgs.zlib
+            pkgs.pythonManylinuxPackages.manylinux1
+          ]);
+        };
+
+        shellHook = ''
+          # Unset PYTHONPATH to avoid conflicts
+          unset PYTHONPATH
+          
+          # Use the Nix Python environment
+          export PATH="${pythonEnv}/bin:$PATH"
+          
+          echo "🔬 SDR Impure Development Environment"
+          echo "System packages (Nix): soapysdr, numpy, matplotlib"
+          echo "Additional packages: Use 'uv add package-name'"
+          echo ""
+          echo "Usage:"
+          echo "  python waterfall.py           # Direct execution"
+          echo "  uv add scipy pandas          # Add pure Python packages"
+          echo "  uv run python script.py     # Run with uv-managed packages"
+        '';
+      };
+
+      # Pure Nix development shell (when pyproject.toml exists)
+      pure = lib.mkIf (workspace != null) (
+        let
+          # Create virtual environment from workspace dependencies
+          venv = pythonSet.mkVirtualEnv "${projectConfig.name}-venv" 
+            workspace.deps.default;
+        in pkgs.mkShell {
+          name = "${projectConfig.name}-pure-shell";
+          
+          packages = systemDeps ++ [ venv ];
+          
+          env = {
+            # SDR library paths
+            SOAPY_SDR_PLUGIN_PATH = lib.makeSearchPath "lib/SoapySDR/modules" [
+              pkgs.soapysdr-with-plugins
+            ];
+            
+            # Graphics and display
+            DISPLAY = ":0";
+            TERM = "xterm-kitty";
+          } // lib.optionalAttrs pkgs.stdenv.isLinux {
+            LD_LIBRARY_PATH = lib.makeLibraryPath (systemDeps ++ [
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
+            ]);
+          };
+
+          shellHook = ''
+            echo "🔬 Pure Nix SDR Environment"
+            echo "Python environment: ${venv}"
+            echo ""
+            echo "All dependencies are managed by Nix"
+            echo "Use 'python' to run scripts directly"
+          '';
+        }
+      );
+
+      # Editable development shell for package development
+      editable = lib.mkIf (workspace != null) (
+        let
+          # Create editable overlay
+          editableOverlay = workspace.mkEditablePyprojectOverlay {
+            root = "$REPO_ROOT";
+          };
+
+          # Override with editable packages
+          editablePythonSet = pythonSet.overrideScope (
+            lib.composeManyExtensions [
+              editableOverlay
+              customOverrides
+            ]
+          );
+
+          venv = editablePythonSet.mkVirtualEnv "${projectConfig.name}-editable-venv"
+            workspace.deps.default;
+        in pkgs.mkShell {
+          name = "${projectConfig.name}-editable-shell";
+          
+          packages = systemDeps ++ [ venv ];
+          
+          env = {
+            REPO_ROOT = builtins.toString ./.;
+            SOAPY_SDR_PLUGIN_PATH = lib.makeSearchPath "lib/SoapySDR/modules" [
+              pkgs.soapysdr-with-plugins
+            ];
+            DISPLAY = ":0";
+            TERM = "xterm-kitty";
+          } // lib.optionalAttrs pkgs.stdenv.isLinux {
+            LD_LIBRARY_PATH = lib.makeLibraryPath (systemDeps ++ [
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
+            ]);
+          };
+
+          shellHook = ''
+            echo "🔬 Editable SDR Development Environment"
+            echo "Changes to local packages are immediately available"
+          '';
+        }
+      );
+    });
+
+    # Packages for deployment/distribution
+    packages = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+      python = pkgs.${projectConfig.pythonVersion};
+    in lib.optionalAttrs (builtins.pathExists ./pyproject.toml) (
+      let
+        workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
+        baseSet = pkgs.callPackage pyproject-nix.build.packages { inherit python; };
+        
+        pythonSet = baseSet.overrideScope (
+          lib.composeManyExtensions [
+            pyproject-build-systems.overlays.default
+            (workspace.mkPyprojectOverlay { sourcePreference = "wheel"; })
+            # Add production-specific overrides here
+          ]
+        );
+      in {
+        default = pythonSet.mkVirtualEnv "${projectConfig.name}" workspace.deps.default;
+        
+        # Individual packages if your workspace has multiple packages
+        # package-name = pythonSet.package-name;
+      }
+    ));
+
+    # Formatters for `nix fmt`
+    formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
+
+    # Development apps
+    apps = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      # Example: run waterfall visualization
+      waterfall = {
+        type = "app";
+        program = "${pkgs.writeShellScript "waterfall" ''
+          exec python ${./waterfall.py} "$@"
+        ''}";
+      };
+      
+      # Example: run delay measurement
+      measure-delay = {
+        type = "app";
+        program = "${pkgs.writeShellScript "measure-delay" ''
+          exec python ${./MeasureDelay.py} "$@"
+        ''}";
+      };
+    });
+  };
+} 

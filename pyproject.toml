@@ -1,0 +1,171 @@
+[project]
+name = "sdr-experiments"
+version = "0.1.0"
+description = "Software Defined Radio experiments and tools"
+authors = [
+    {name = "SDR Team", email = "team@example.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+
+# Core dependencies for SDR work
+# Note: When using with Nix, soapysdr/numpy/matplotlib are provided by the system
+# This list is for non-Nix environments or reference
+dependencies = [
+    # These are provided by Nix in the development environment:
+    # "numpy>=1.24.0",
+    # "matplotlib>=3.6.0", 
+    # "soapysdr>=0.8.0",  # Not available on PyPI - needs C compilation
+]
+
+# Optional dependencies for different use cases
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+# Signal processing and analysis
+signal = [
+    "scipy>=1.10.0",
+    "scikit-learn>=1.3.0",
+    "pandas>=2.0.0",
+]
+
+# Advanced visualization
+viz = [
+    "plotly>=5.15.0",
+    "dash>=2.11.0",
+    "bokeh>=3.2.0",
+]
+
+# Hardware-specific drivers
+hardware = [
+    "pyrtlsdr>=0.2.9",  # RTL-SDR support
+    "pyuhd>=4.4.0",     # USRP support (if available)
+]
+
+# All optional dependencies
+all = [
+    "sdr-experiments[dev,signal,viz,hardware]"
+]
+
+[project.urls]
+Homepage = "https://github.com/example/sdr-experiments"
+Repository = "https://github.com/example/sdr-experiments"
+Documentation = "https://sdr-experiments.readthedocs.io"
+
+[project.scripts]
+sdr-waterfall = "sdr_experiments.waterfall:main"
+sdr-measure-delay = "sdr_experiments.measure_delay:main"
+sdr-verify-ptp = "sdr_experiments.verify_ptp_clock:main"
+
+# Build system configuration (PEP 518)
+[build-system]
+requires = [
+    "setuptools>=68.0.0",
+    "wheel>=0.40.0",
+    "setuptools-scm>=7.0.0",
+]
+build-backend = "setuptools.build_meta"
+
+# Setuptools configuration
+[tool.setuptools]
+packages = ["sdr_experiments"]
+
+[tool.setuptools.package-dir]
+sdr_experiments = "src/sdr_experiments"
+
+# Dynamic versioning with setuptools-scm
+[tool.setuptools_scm]
+write_to = "src/sdr_experiments/_version.py"
+
+# Development tools configuration
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["sdr_experiments"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "SoapySDR.*",
+    "matplotlib.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "hardware: marks tests that require hardware (deselect with '-m \"not hardware\"')",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/sdr_experiments"]
+omit = [
+    "*/tests/*",
+    "*/_version.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+] 

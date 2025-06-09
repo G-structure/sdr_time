@@ -1,0 +1,52 @@
+"""SoapySDR log handling utilities."""
+
+import SoapySDR
+
+
+class SoapyLogHandler:
+    """Handler for SoapySDR log messages with PTP clock detection."""
+    
+    def __init__(self):
+        self.ptp_mode_logged = False
+        self.monotonic_fallback_logged = False
+        self.tai_failed_logged = False
+    
+    def log_handler(self, level, message):
+        """Handle SoapySDR log messages."""
+        try:
+            level_str = SoapySDR.SoapySDR_logLevelToString(level)
+        except AttributeError:
+            level_str = str(level)
+        
+        if "Using PTP clock /dev/ptp0" in message:
+            self.ptp_mode_logged = True
+        if "Falling back to monotonic clock" in message:
+            self.monotonic_fallback_logged = True
+        if "clock_gettime(CLOCK_TAI) failed" in message:
+            self.tai_failed_logged = True
+
+
+# Global handler instance for backward compatibility
+_global_handler = SoapyLogHandler()
+
+# Expose the global handler functions for backward compatibility
+def soapy_log_handle(level, message):
+    """Global log handler function for backward compatibility."""
+    return _global_handler.log_handler(level, message)
+
+
+def reset_log_flags():
+    """Reset all log flags."""
+    global _global_handler
+    _global_handler.ptp_mode_logged = False
+    _global_handler.monotonic_fallback_logged = False
+    _global_handler.tai_failed_logged = False
+
+
+def get_log_status():
+    """Get the current status of log flags."""
+    return {
+        'ptp_mode_logged': _global_handler.ptp_mode_logged,
+        'monotonic_fallback_logged': _global_handler.monotonic_fallback_logged,
+        'tai_failed_logged': _global_handler.tai_failed_logged,
+    } 
