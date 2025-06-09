@@ -1,281 +1,209 @@
-# SDR Experiments with Nix
+# SDR Experiments Toolkit
 
-A professional Software Defined Radio (SDR) development environment using Nix flakes, uv, and pyproject.toml (PEP 518).
+Welcome to the SDR (Software Defined Radio) Experiments Toolkit! This project provides a comprehensive environment for experimenting with software-defined radio using Python and SoapySDR.
 
-## 🌟 Features
+## 🎯 What You'll Learn
 
-- **Modern Python packaging** with pyproject.toml (PEP 518 compliant)
-- **Nix flakes** for reproducible development environments
-- **uv2nix integration** for dependency management
-- **Multiple development shells** for different workflows
-- **C extension support** with optimized builds for SDR libraries
-- **SDR-specific optimizations** for NumPy, SciPy, and SoapySDR
+By working with this project, you'll learn:
+- **Software Defined Radio (SDR)** fundamentals
+- **Signal processing** with Python and NumPy
+- **Real-time data visualization** with matplotlib
+- **Remote SDR device control** over networks
+- **Precision timing** and clock synchronization (PTP)
+- **Modern development environments** with Nix
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- [Nix](https://nixos.org/download) with flakes enabled
-- [direnv](https://direnv.net/) (optional but recommended)
+You need a Linux system (Ubuntu, Debian, NixOS, etc.) or WSL2 on Windows.
 
-### Enter the Development Environment
+### 1. Install Nix
 
 ```bash
-# Clone and enter the repository
-cd sdr_exp
+# Install Nix (the package manager)
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 
-# Enter the default development shell
-nix develop
-
-# Or use direnv for automatic activation
-echo "use flake" > .envrc
-direnv allow
+# Restart your shell or run:
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 ```
 
-### Available Development Shells
+### 2. Clone and Enter the Project
 
-1. **Default Shell** (`nix develop`): Hybrid approach with system packages from Nix
-2. **Impure Shell** (`nix develop .#impure`): Recommended for uv workflow with Nix system deps
-3. **Pure Shell** (`nix develop .#pure`): Pure Nix environment (when pyproject.toml exists)
-4. **Editable Shell** (`nix develop .#editable`): Development with editable packages
+```bash
+git clone <your-repo-url>
+cd sdr_exp
 
-## 📦 Project Structure
+# Enter the development environment (this may take a few minutes the first time)
+nix develop
+```
+
+That's it! You now have a complete SDR development environment with all dependencies pre-installed.
+
+### 3. Test Your Setup
+
+```bash
+# Test the environment
+sdr-verify-ptp --help
+sdr-waterfall --help
+sdr-measure-delay --help
+
+# Test with a remote SDR device (if you have one)
+sdr-verify-ptp --args "remote=tcp://your-sdr-server:2500"
+```
+
+## 📁 Project Structure
 
 ```
 sdr_exp/
-├── flake.nix              # Nix flake configuration
-├── pyproject.toml         # Python project configuration (PEP 518)
-├── src/
-│   └── sdr_experiments/   # Main Python package
-│       ├── __init__.py
-│       ├── soapy_log_handle.py
-│       └── utils.py
-├── nix/
-│   ├── overlays/
-│   │   └── sdr-overrides.nix  # Custom Python package overrides
-│   └── packages/          # Custom package definitions
-├── tests/                 # Test files
-├── docs/                  # Documentation
-└── scripts/               # Standalone scripts
+├── README.md                 # This file
+├── docs/                     # Documentation
+│   ├── nix.md               # Nix environment guide
+│   └── sdr.md               # SDR concepts and tools
+├── src/                      # Source code (future modules)
+├── flake.nix                # Nix environment definition
+├── pyproject.toml           # Python project configuration
+└── src/
+    └── sdr_experiments/     # Main package
+        ├── verify_ptp_clock.py  # PTP clock synchronization tester
+        ├── waterfall.py         # Real-time spectrum waterfall
+        ├── MeasureDelay.py      # RF propagation delay measurement
+        ├── kitty_test.py        # Terminal graphics test
+        └── soapy_log_handle.py  # SoapySDR logging utilities
 ```
 
-## 🔧 Development Workflows
+## 🛠️ Available Tools
 
-### Using the Hybrid Approach (Recommended)
+### Core Scripts
 
-```bash
-# Enter the default or impure development shell
-nix develop
-# or
-nix develop .#impure
+1. **`sdr-verify-ptp`** - Tests if your SDR device supports precise timing
+   ```bash
+   sdr-verify-ptp --args "driver=hackrf" --debug
+   ```
 
-# Critical SDR packages (soapysdr, numpy, matplotlib) are provided by Nix
-# Run scripts directly - no uv needed for basic usage
-python waterfall.py
-python MeasureDelay.py
+2. **`sdr-waterfall`** - Real-time spectrum visualization
+   ```bash
+   sdr-waterfall --args "driver=hackrf" --freq 100e6
+   ```
 
-# Add additional pure Python packages with uv
-uv add scipy pandas plotly
+3. **`sdr-measure-delay`** - Measures signal propagation delays
+   ```bash
+   sdr-measure-delay --help
+   ```
 
-# For packages requiring uv environment
-uv run python script_with_additional_deps.py
+### Supported Hardware
 
-# Development tools
-uv add --dev pytest black isort mypy
-uv run pytest
-```
+- **HackRF One** - Entry-level SDR (1MHz-6GHz)
+- **RTL-SDR** - Budget USB dongles (receive only)
+- **USRP** - Professional SDR equipment
+- **PlutoSDR** - Learning-focused SDR
+- **Remote devices** - Connect to SDRs over the network
 
-### Using Pure Nix
+## 🎓 Learning Path
 
-```bash
-# Enter pure Nix shell
-nix develop .#pure
+### New to SDR?
+1. Read [`docs/sdr.md`](docs/sdr.md) - Learn SDR fundamentals
+2. Start with `sdr-kitty-test` to verify your terminal
+3. Try `sdr-verify-ptp` with a local device
+4. Experiment with `sdr-waterfall` to see live signals
 
-# All dependencies are managed by Nix
-python waterfall.py
-python MeasureDelay.py
-```
+### New to Nix?
+1. Read [`docs/nix.md`](docs/nix.md) - Understanding our development environment
+2. Learn how to add new Python packages
+3. Understand why we use Nix for this project
 
-### Package Development
+### Ready to Develop?
+1. Look at the existing scripts as examples
+2. Add your own experiments to the project
+3. Use the established patterns for device handling
 
-```bash
-# Enter editable development shell
-nix develop .#editable
+## 🔧 Adding Dependencies
 
-# Changes to src/sdr_experiments/ are immediately available
-python -c "import sdr_experiments; print(sdr_experiments.__version__)"
-```
+### Python Packages
 
-## 🛠 Building and Installing
-
-### Build the Package
-
-```bash
-# Build the package
-nix build
-
-# Run the built package
-./result/bin/sdr-waterfall --help
-```
-
-### Install in Environment
-
-```bash
-# Install in current environment
-uv pip install -e .
-
-# Or build wheel
-uv build
-```
-
-## 🎯 SDR-Specific Features
-
-### Optimized Libraries
-
-The Nix environment includes optimized builds of:
-
-- **NumPy**: Built with OpenBLAS for fast linear algebra
-- **SciPy**: Optimized with FFTW and BLAS
-- **SoapySDR**: Proper C library linking
-- **Matplotlib**: Full backend support for visualization
-
-### Hardware Support
-
-Pre-configured support for:
-
-- SoapySDR with plugins
-- RTL-SDR dongles
-- HackRF devices
-- USRP (UHD)
-- GNU Radio
-
-### Environment Variables
-
-The development shell automatically sets:
-
-```bash
-SOAPY_SDR_PLUGIN_PATH    # SoapySDR plugin discovery
-LD_LIBRARY_PATH          # C library paths (Linux)
-UV_PYTHON                # Force uv to use Nix Python
-TERM=xterm-kitty         # Kitty terminal support
-```
-
-## 📋 Available Scripts
-
-- `sdr-waterfall`: Real-time waterfall visualization
-- `sdr-measure-delay`: RF delay measurement
-- `sdr-verify-ptp`: PTP clock verification
-
-## 🔧 Customization
-
-### Adding Custom Packages
-
-1. Create package definition in `nix/packages/my-package.nix`
-2. Add to overlays in `nix/overlays/sdr-overrides.nix`
-3. Reference in `flake.nix`
-
-### Python Dependencies
-
-Edit `pyproject.toml`:
+For pure Python packages, add them to `pyproject.toml`:
 
 ```toml
-[project]
 dependencies = [
     "numpy>=1.24.0",
-    "my-new-package>=1.0.0",
-]
-
-[project.optional-dependencies]
-extra = [
-    "additional-package>=2.0.0",
+    "matplotlib>=3.7.0",
+    "scipy>=1.11.0",
+    "requests>=2.31.0",  # Your new package
 ]
 ```
 
-### C Extension Overrides
+Then update the environment:
+```bash
+nix develop --command uv add requests
+```
 
-Add to `nix/overlays/sdr-overrides.nix`:
+### System Packages
+
+For packages that need compilation or system integration, add them to `flake.nix`:
 
 ```nix
-my-package = prev.my-package.overrideAttrs (old: {
-  buildInputs = (old.buildInputs or []) ++ [ final.pkgs.my-c-library ];
-  env = (old.env or {}) // {
-    MY_C_LIBRARY_PATH = final.pkgs.my-c-library;
-  };
-});
+pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+  soapysdr
+  numpy
+  matplotlib
+  scipy
+  # Add your package here
+]);
 ```
 
-## 🧪 Testing
+## 🏠 Remote Development
+
+### Connecting to Remote SDR Devices
+
+Many SDR devices can be shared over the network using SoapySDRServer:
 
 ```bash
-# Run tests
-uv run pytest
+# On the machine with the SDR hardware
+SoapySDRServer --bind=0.0.0.0:2500
 
-# Run with coverage
-uv run pytest --cov=sdr_experiments
-
-# Type checking
-uv run mypy src/
-
-# Code formatting
-uv run black src/ tests/
-uv run isort src/ tests/
+# On your development machine
+sdr-verify-ptp --args "remote=tcp://192.168.1.100:2500"
 ```
 
-## 📈 Performance Optimizations
-
-### CPU-Specific Builds
-
-The environment enables `-march=native` for C extensions when possible, optimizing for your specific CPU.
-
-### Memory Management
-
-- OpenBLAS threading is configured appropriately
-- NumPy uses optimized BLAS routines
-- Memory-mapped file support for large datasets
-
-### SDR-Specific
-
-- SoapySDR plugins are pre-loaded
-- Hardware drivers are available
-- Real-time scheduling support (where available)
+This allows multiple people to share expensive SDR hardware!
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Missing SoapySDR plugins**: Ensure `SOAPY_SDR_PLUGIN_PATH` is set
-2. **Import errors**: Check that you're in the correct shell environment
-3. **C extension build failures**: Review the overlay configuration
+**"No module named 'SoapySDR'"**
+- Make sure you're in the Nix environment: `nix develop`
 
-### Debug Commands
+**"Device not found"**
+- Check device connections and permissions
+- Try listing devices: `python -c "import SoapySDR; print(SoapySDR.Device.enumerate())"`
 
-```bash
-# Check Python environment
-python -c "import sys; print(sys.path)"
+**"Permission denied on /dev/ptp0"**
+- For PTP timing, run the SDR server with sudo or fix permissions
 
-# Check SoapySDR
-python -c "import SoapySDR; print(SoapySDR.Device.enumerate())"
+### Getting Help
 
-# Check library paths
-echo $LD_LIBRARY_PATH
-```
-
-## 📚 Resources
-
-- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
-- [uv2nix Documentation](https://pyproject-nix.github.io/uv2nix/)
-- [PEP 518](https://peps.python.org/pep-0518/)
-- [SoapySDR Documentation](https://github.com/pothosware/SoapySDR/wiki)
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+1. Check the documentation in `docs/`
+2. Look at the existing script examples
+3. Use `--help` flag on any script
+4. Check SoapySDR logs with `--debug` flag
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make changes and test
-4. Submit a pull request
+1. All development happens in the Nix environment
+2. Follow the established code patterns
+3. Add documentation for new features
+4. Test with multiple SDR devices when possible
 
-The Nix environment ensures all contributors have identical development setups! 
+## 📚 Further Reading
+
+- [SoapySDR Documentation](https://github.com/pothosware/SoapySDR/wiki)
+- [GNU Radio Tutorials](https://wiki.gnuradio.org/index.php/Tutorials)
+- [SDR for Engineers](https://pysdr.org/) - Excellent online textbook
+- [RTL-SDR Blog](https://www.rtl-sdr.com/) - News and tutorials
+
+---
+
+**Welcome to the world of Software Defined Radio!** 🎉
+
+Start with [`docs/sdr.md`](docs/sdr.md) if you're new to SDR concepts, or [`docs/nix.md`](docs/nix.md) if you want to understand our development environment better. 
