@@ -38,6 +38,28 @@
 
             # ptp
             linuxptp
+
+            # Create wrapper scripts for our tools
+            (pkgs.writeScriptBin "sdr-verify-ptp" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.verify_ptp "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-waterfall" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.waterfall_tool "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-measure-delay" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.measure_delay "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-kitty-test" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m kitty_graphics.test "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-ptp-sync" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.ptp_sync "$@"
+            '')
           ];
 
           env = {
@@ -70,6 +92,7 @@
             echo "  sdr-waterfall --help"  
             echo "  sdr-measure-delay --help"
             echo "  sdr-kitty-test"
+            echo "  sdr-ptp-sync --help"
             echo ""
             
             # Unset PYTHONPATH to avoid conflicts
@@ -107,6 +130,28 @@
 
             # ptp
             linuxptp
+
+            # Create wrapper scripts for our tools
+            (pkgs.writeScriptBin "sdr-verify-ptp" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.verify_ptp "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-waterfall" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.waterfall_tool "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-measure-delay" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.measure_delay "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-kitty-test" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m kitty_graphics.test "$@"
+            '')
+            (pkgs.writeScriptBin "sdr-ptp-sync" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m sdr_experiments.tools.ptp_sync "$@"
+            '')
           ];
 
           env = {
@@ -139,6 +184,7 @@
             echo "  sdr-waterfall --help"  
             echo "  sdr-measure-delay --help"
             echo "  sdr-kitty-test"
+            echo "  sdr-ptp-sync --help"
             echo ""
             
             # Unset PYTHONPATH to avoid conflicts

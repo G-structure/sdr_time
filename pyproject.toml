@@ -71,7 +71,7 @@ sdr-kitty-test = "kitty_graphics.test:main"
 
 # Build system configuration (PEP 518)
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "setuptools>=42.0.0"]
 build-backend = "hatchling.build"
 
 # Hatchling configuration - include all packages
