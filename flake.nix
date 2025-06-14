@@ -6,75 +6,146 @@
   };
 
   outputs = { self, nixpkgs, ... }: {
-    devShells.x86_64-linux.default = 
-      let
-        pkgs = nixpkgs.legacyPackages.x86_64-linux;
-        
-        # Create Python environment with SDR packages
-        pythonEnv = pkgs.python312.withPackages (ps: with ps; [
-          soapysdr
-          numpy
-          matplotlib
-          scipy
-        ]);
-        
-      in pkgs.mkShell {
-        name = "sdr-dev-shell";
-        
-        packages = with pkgs; [
-          pythonEnv
-          uv
-          # SDR tools
-          soapysdr-with-plugins
-          soapyremote
-          hackrf
-          rtl-sdr
-          uhd
-          # Development tools
-          git
-          # Graphics support
-          kitty
-
-          # ptp
-          linuxptp
-        ];
-
-        env = {
-          # UV configuration
-          UV_PYTHON_DOWNLOADS = "never";
-          UV_PYTHON = "${pythonEnv}/bin/python";
+    devShells = {
+      x86_64-linux.default = 
+        let
+          pkgs = nixpkgs.legacyPackages.x86_64-linux;
           
-          # SDR library paths
-          SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8-3";
+          # Create Python environment with SDR packages
+          pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+            soapysdr
+            numpy
+            matplotlib
+            scipy
+          ]);
           
-          # Terminal support
-          TERM = "xterm-kitty";
+        in pkgs.mkShell {
+          name = "sdr-dev-shell";
+          
+          packages = with pkgs; [
+            pythonEnv
+            uv
+            # SDR tools
+            soapysdr-with-plugins
+            soapyremote
+            hackrf
+            rtl-sdr
+            uhd
+            # Development tools
+            git
+            # Graphics support
+            kitty
+
+            # ptp
+            linuxptp
+          ];
+
+          env = {
+            # UV configuration
+            UV_PYTHON_DOWNLOADS = "never";
+            UV_PYTHON = "${pythonEnv}/bin/python";
+            
+            # SDR library paths
+            SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8-3";
+            
+            # Terminal support
+            TERM = "xterm-kitty";
+          };
+
+          shellHook = ''
+            echo "🔬 SDR Development Environment (Simple)"
+            echo "Python: ${pythonEnv}/bin/python"
+            echo ""
+            echo "Testing packages:"
+            echo "  - SoapySDR: $(python -c "import SoapySDR; print('✓')" 2>/dev/null || echo "✗")"
+            echo "  - NumPy: $(python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
+            echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
+            echo ""
+            echo "Available packages (src/):"
+            echo "  - sdr_experiments (main SDR tools)"
+            echo "  - kitty_graphics (terminal graphics)"
+            echo ""
+            echo "Ready to run:"
+            echo "  sdr-verify-ptp --help"
+            echo "  sdr-waterfall --help"  
+            echo "  sdr-measure-delay --help"
+            echo "  sdr-kitty-test"
+            echo ""
+            
+            # Unset PYTHONPATH to avoid conflicts
+            unset PYTHONPATH
+            export PYTHONPATH="$PWD/src:$PYTHONPATH"
+          '';
         };
 
-        shellHook = ''
-          echo "🔬 SDR Development Environment (Simple)"
-          echo "Python: ${pythonEnv}/bin/python"
-          echo ""
-          echo "Testing packages:"
-          echo "  - SoapySDR: $(python -c "import SoapySDR; print('✓')" 2>/dev/null || echo "✗")"
-          echo "  - NumPy: $(python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
-          echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
-          echo ""
-          echo "Available packages (src/):"
-          echo "  - sdr_experiments (main SDR tools)"
-          echo "  - kitty_graphics (terminal graphics)"
-          echo ""
-          echo "Ready to run:"
-          echo "  sdr-verify-ptp --help"
-          echo "  sdr-waterfall --help"  
-          echo "  sdr-measure-delay --help"
-          echo "  sdr-kitty-test"
-          echo ""
+      aarch64-linux.default = 
+        let
+          pkgs = nixpkgs.legacyPackages.aarch64-linux;
           
-          # Unset PYTHONPATH to avoid conflicts
-          unset PYTHONPATH
-          export PYTHONPATH="$PWD/src:$PYTHONPATH"
-        '';
-      };
+          # Create Python environment with SDR packages
+          pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+            soapysdr
+            numpy
+            matplotlib
+            scipy
+          ]);
+          
+        in pkgs.mkShell {
+          name = "sdr-dev-shell";
+          
+          packages = with pkgs; [
+            pythonEnv
+            uv
+            # SDR tools
+            soapysdr-with-plugins
+            soapyremote
+            rtl-sdr
+            # Development tools
+            git
+            # Graphics support
+            kitty
+
+            # ptp
+            linuxptp
+          ];
+
+          env = {
+            # UV configuration
+            UV_PYTHON_DOWNLOADS = "never";
+            UV_PYTHON = "${pythonEnv}/bin/python";
+            
+            # SDR library paths
+            SOAPY_SDR_PLUGIN_PATH = "${pkgs.soapysdr-with-plugins}/lib/SoapySDR/modules0.8-3";
+            
+            # Terminal support
+            TERM = "xterm-kitty";
+          };
+
+          shellHook = ''
+            echo "🔬 SDR Development Environment (Simple) - Raspberry Pi"
+            echo "Python: ${pythonEnv}/bin/python"
+            echo ""
+            echo "Testing packages:"
+            echo "  - SoapySDR: $(python -c "import SoapySDR; print('✓')" 2>/dev/null || echo "✗")"
+            echo "  - NumPy: $(python -c "import numpy; print('✓')" 2>/dev/null || echo "✗")"
+            echo "  - Matplotlib: $(python -c "import matplotlib; print('✓')" 2>/dev/null || echo "✗")"
+            echo ""
+            echo "Available packages (src/):"
+            echo "  - sdr_experiments (main SDR tools)"
+            echo "  - kitty_graphics (terminal graphics)"
+            echo ""
+            echo "Ready to run:"
+            echo "  sdr-verify-ptp --help"
+            echo "  sdr-waterfall --help"  
+            echo "  sdr-measure-delay --help"
+            echo "  sdr-kitty-test"
+            echo ""
+            
+            # Unset PYTHONPATH to avoid conflicts
+            unset PYTHONPATH
+            export PYTHONPATH="$PWD/src:$PYTHONPATH"
+          '';
+        };
+    };
   };
 } 
