@@ -150,7 +150,37 @@
             '')
             (pkgs.writeScriptBin "sdr-ptp-sync" ''
               #!${pkgs.bash}/bin/bash
-              ${pythonEnv}/bin/python -m sdr_experiments.tools.ptp_sync "$@"
+              set -e
+
+              # These arguments require root privileges.
+              NEEDS_ROOT=0
+              for arg in "$@"; do
+                if [[ "$arg" == "--start-master" || "$arg" == "--start-slave" || "$arg" == "--stop" || "$arg" == "--check" ]]; then
+                  NEEDS_ROOT=1
+                  break
+                fi
+              done
+              
+              # If we need root and don't have it, re-execute with sudo.
+              if [[ "$NEEDS_ROOT" -eq 1 && "$EUID" -ne 0 ]]; then
+                echo "This command requires root privileges. Re-running with sudo..."
+                # Execute the script again with sudo, ensuring the PATH is preserved.
+                # "$0" is the full path to this script in the Nix store.
+                exec sudo -E --preserve-env=PATH "$0" "$@"
+              fi
+              
+              # Execute the python script.
+              # We must use an absolute path to the script in case sudo changes the CWD.
+              # This assumes the command is run from the project root.
+              PYTHON_SCRIPT_PATH="$PWD/src/sdr_experiments/tools/ptp_sync.py"
+
+              if [ ! -f "$PYTHON_SCRIPT_PATH" ]; then
+                  echo "Error: Python script not found at $PYTHON_SCRIPT_PATH" >&2
+                  echo "Please ensure you are running this command from the root of the project directory." >&2
+                  exit 1
+              fi
+              
+              ${pythonEnv}/bin/python "$PYTHON_SCRIPT_PATH" "$@"
             '')
           ];
 
