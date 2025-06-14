@@ -27,9 +27,21 @@ if ! command_exists nix; then
         exit 1
     fi
     
-    # Source Nix in current session
-    if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
-        source '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+    # Source Nix in current session if installed in standard location
+    if [ -e '/nix/var/nix/profiles/default/bin/nix' ]; then
+        if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+            source '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
+        fi
+        # Add Nix bin to PATH for this session if not already present
+        if ! echo "$PATH" | grep -q "/nix/var/nix/profiles/default/bin"; then
+            export PATH="/nix/var/nix/profiles/default/bin:$PATH"
+            echo "✅ Added /nix/var/nix/profiles/default/bin to PATH for this session"
+        fi
+        # Add to .bashrc if not already present
+        if ! grep -q 'nix-daemon.sh' ~/.bashrc 2>/dev/null; then
+            echo 'if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh; fi' >> ~/.bashrc
+            echo "✅ Added Nix environment to ~/.bashrc"
+        fi
     fi
     
     echo "✅ Nix installed successfully"
@@ -40,7 +52,10 @@ fi
 # Verify Nix installation
 if ! command_exists nix; then
     echo "❌ Nix installation failed or not in PATH"
-    echo "Please restart your shell and run this script again"
+    echo "If you just installed Nix, try restarting your shell or run:"
+    echo "  source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+    echo "Or manually add /nix/var/nix/profiles/default/bin to your PATH:"
+    echo "  export PATH=/nix/var/nix/profiles/default/bin:\$PATH"
     exit 1
 fi
 
