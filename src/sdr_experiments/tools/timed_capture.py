@@ -98,13 +98,15 @@ class SDRStreamer:
     
     def __init__(self, device_args: str, sample_rate: float, frequency: float, 
                  rf_gain: Optional[bool] = None, if_gain: Optional[int] = None, 
-                 bb_gain: Optional[int] = None, buffer_duration: float = 10.0):
+                 bb_gain: Optional[int] = None, legacy_gain: Optional[float] = None,
+                 buffer_duration: float = 10.0):
         self.device_args = device_args
         self.sample_rate = sample_rate
         self.frequency = frequency
         self.rf_gain = rf_gain  # True/False for HackRF RF amp
         self.if_gain = if_gain  # 0-40 dB in 8 dB steps
         self.bb_gain = bb_gain  # 0-62 dB in 2 dB steps
+        self.legacy_gain = legacy_gain  # Overall gain for backward compatibility
         
         self.buffer = CircularTimestampBuffer(buffer_duration)
         self.streaming_thread = None
@@ -190,15 +192,25 @@ class SDRStreamer:
                         self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, 'VGA', bb_value)
                         print(f"Baseband Gain (VGA): {bb_value} dB")
                         
-                # If no individual gains specified, print current gain settings
+                # If no individual gains specified, check for legacy gain or print current settings
                 if all(g is None for g in [self.rf_gain, self.if_gain, self.bb_gain]):
-                    for gain_name in gain_elements:
-                        current_gain = self.sdr.getGain(SoapySDR.SOAPY_SDR_RX, 0, gain_name)
-                        print(f"Current {gain_name} gain: {current_gain} dB")
+                    if self.legacy_gain is not None:
+                        # Use legacy overall gain setting
+                        self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, self.legacy_gain)
+                        print(f"Legacy overall gain: {self.legacy_gain} dB")
+                    else:
+                        # Print current gain settings
+                        for gain_name in gain_elements:
+                            current_gain = self.sdr.getGain(SoapySDR.SOAPY_SDR_RX, 0, gain_name)
+                            print(f"Current {gain_name} gain: {current_gain} dB")
                         
             except Exception as gain_error:
                 print(f"Warning: Could not set individual gains: {gain_error}")
-                print("Falling back to automatic gain distribution")
+                if self.legacy_gain is not None:
+                    print(f"Falling back to legacy overall gain: {self.legacy_gain} dB")
+                    self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, self.legacy_gain)
+                else:
+                    print("Using device default gain settings")
             
             actual_rate = self.sdr.getSampleRate(SoapySDR.SOAPY_SDR_RX, 0)
             print(f"Actual sample rate: {actual_rate/1e6:.3f} MSPS")
@@ -328,6 +340,13 @@ def main():
     
     args = parser.parse_args()
     
+    # Process RF gain arguments
+    rf_gain_setting = None
+    if args.rf_gain:
+        rf_gain_setting = True
+    elif args.no_rf_gain:
+        rf_gain_setting = False
+    
     # Configure logging
     if args.debug:
         SoapySDR.setLogLevel(SoapySDR.SOAPY_SDR_DEBUG)
@@ -338,9 +357,34 @@ def main():
     print(f"Device: {args.args}")
     print(f"Sample Rate: {args.rate/1e6:.3f} MSPS")
     print(f"Frequency: {args.freq/1e6:.3f} MHz")
-    print(f"RF Gain: {args.rf_gain}")
-    print(f"IF Gain: {args.if_gain} dB")
-    print(f"Baseband Gain: {args.bb_gain} dB")
+    
+    # Display gain settings
+    if rf_gain_setting is not None:
+        print(f"RF Gain: {'ON (~11 dB)' if rf_gain_setting else 'OFF (0 dB)'}")
+    else:
+        print("RF Gain: Auto")
+        
+    if args.if_gain is not None:
+        # Validate and round IF gain
+        validated_if = max(0, min(40, (args.if_gain // 8) * 8))
+        print(f"IF Gain: {validated_if} dB")
+        if validated_if != args.if_gain:
+            print(f"  (Note: IF gain rounded from {args.if_gain} to {validated_if} dB)")
+    else:
+        print("IF Gain: Auto")
+        
+    if args.bb_gain is not None:
+        # Validate and round BB gain  
+        validated_bb = max(0, min(62, (args.bb_gain // 2) * 2))
+        print(f"Baseband Gain: {validated_bb} dB")
+        if validated_bb != args.bb_gain:
+            print(f"  (Note: BB gain rounded from {args.bb_gain} to {validated_bb} dB)")
+    else:
+        print("Baseband Gain: Auto")
+        
+    if args.gain is not None:
+        print(f"Legacy Overall Gain: {args.gain} dB")
+        
     print(f"Buffer Duration: {args.buffer_duration} seconds")
     print(f"Task Duration: {args.task_duration} seconds")
     print()
@@ -350,9 +394,10 @@ def main():
         device_args=args.args,
         sample_rate=args.rate,
         frequency=args.freq,
-        rf_gain=args.rf_gain,
+        rf_gain=rf_gain_setting,
         if_gain=args.if_gain,
         bb_gain=args.bb_gain,
+        legacy_gain=args.gain,
         buffer_duration=args.buffer_duration
     )
     
