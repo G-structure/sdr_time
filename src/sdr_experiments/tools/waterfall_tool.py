@@ -58,6 +58,8 @@ def run_waterfall(device_args_str, sample_rate_hz, frequency_hz, gain_db):
         print(f"Waterfall display {'enabled' if waterfall.is_kitty else 'disabled (not in Kitty terminal)'}")
         
         buffer_count = 0
+        last_display_time = 0
+        display_interval = 0.5  # Update display every 0.5 seconds
 
         while True: 
             timeout_val_us = int(5 * (NUM_SAMPLES_PER_BUFFER / sample_rate_hz) * 1e6) 
@@ -69,7 +71,12 @@ def run_waterfall(device_args_str, sample_rate_hz, frequency_hz, gain_db):
                 # Use waterfall class to handle samples
                 samples_to_process = buff[:samples_read] if samples_read >= waterfall.fft_size else buff[:samples_read]
                 waterfall.add_samples(samples_to_process)
-                waterfall.update_display() 
+                
+                # Only update display every 0.5 seconds
+                current_time = time.time()
+                if current_time - last_display_time >= display_interval:
+                    waterfall.update_display()
+                    last_display_time = current_time
             
             elif samples_read == SoapySDR.SOAPY_SDR_TIMEOUT:
                 pass

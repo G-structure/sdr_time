@@ -68,7 +68,12 @@ sdr_exp/
     ├── kitty_graphics/      # Terminal graphics utilities
     │   ├── protocol.py      # Kitty graphics protocol implementation
     │   └── test.py          # Graphics support testing
-    └── sdr_experiments/     # Main package
+    ├── llm_sidechannel/     # LLM analysis package
+    │   ├── core/            # LLM client and router analysis
+    │   ├── models/          # Model wrappers (Mixtral, etc.)
+    │   ├── analysis/        # Expert usage analytics
+    │   └── tools/           # LLM analysis tools
+    └── sdr_experiments/     # Main SDR package
         ├── core/            # Core SDR functionality
         │   ├── device.py    # Device management utilities
         │   ├── logging.py   # SoapySDR logging utilities
@@ -104,6 +109,18 @@ sdr_exp/
 4. **`sdr-kitty-test`** - Terminal graphics test
    ```bash
    sdr-kitty-test
+   ```
+
+### LLM Analysis Tools
+
+5. **`llm-query`** - Query Mixtral models with MoE analysis
+   ```bash
+   python -m llm_sidechannel.tools.query --preset mixtral-8x7b-4bit --prompt "Explain mixture of experts"
+   ```
+
+6. **`llm-analyze-moe`** - Analyze MoE routing patterns
+   ```bash
+   python -m llm_sidechannel.tools.analyze_moe --preset mixtral-8x7b-4bit --prompts "Hello" "How are you?"
    ```
 
 ### Supported Hardware

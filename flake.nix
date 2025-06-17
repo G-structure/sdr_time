@@ -17,6 +17,12 @@
             numpy
             matplotlib
             scipy
+            # LLM dependencies
+            torch
+            transformers
+            tokenizers
+            accelerate
+            datasets
           ]);
           
         in pkgs.mkShell {
@@ -94,6 +100,14 @@
               
               ${pythonEnv}/bin/python "$PYTHON_SCRIPT_PATH" "$@"
             '')
+            (pkgs.writeScriptBin "llm-query" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.query "$@"
+            '')
+            (pkgs.writeScriptBin "llm-analyze-moe" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.analyze_moe "$@"
+            '')
           ];
 
           env = {
@@ -146,6 +160,12 @@
             numpy
             matplotlib
             scipy
+            # LLM dependencies
+            torch
+            transformers
+            tokenizers
+            accelerate
+            datasets
           ]);
           
         in pkgs.mkShell {
@@ -221,6 +241,14 @@
               
               ${pythonEnv}/bin/python "$PYTHON_SCRIPT_PATH" "$@"
             '')
+            (pkgs.writeScriptBin "llm-query" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.query "$@"
+            '')
+            (pkgs.writeScriptBin "llm-analyze-moe" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.analyze_moe "$@"
+            '')
           ];
 
           env = {
@@ -273,6 +301,12 @@
             numpy
             matplotlib
             scipy
+            # LLM dependencies
+            torch
+            transformers
+            tokenizers
+            accelerate
+            datasets
           ]);
           
         in pkgs.mkShell {
@@ -402,6 +436,12 @@
             numpy
             matplotlib
             scipy
+            # LLM dependencies
+            torch
+            transformers
+            tokenizers
+            accelerate
+            datasets
           ]);
           
         in pkgs.mkShell {
