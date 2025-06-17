@@ -1,6 +1,11 @@
 """SoapySDR log handling utilities."""
 
-import SoapySDR
+try:
+    import SoapySDR
+    SOAPY_AVAILABLE = True
+except ImportError:
+    SOAPY_AVAILABLE = False
+    SoapySDR = None
 
 
 class SoapyLogHandler:
@@ -10,11 +15,18 @@ class SoapyLogHandler:
         self.ptp_mode_logged = False
         self.monotonic_fallback_logged = False
         self.tai_failed_logged = False
+        
+        if not SOAPY_AVAILABLE:
+            import warnings
+            warnings.warn("SoapySDR not available, log handler will have limited functionality")
     
     def log_handler(self, level, message):
         """Handle SoapySDR log messages."""
         try:
-            level_str = SoapySDR.SoapySDR_logLevelToString(level)
+            if SOAPY_AVAILABLE and SoapySDR:
+                level_str = SoapySDR.SoapySDR_logLevelToString(level)
+            else:
+                level_str = str(level)
         except AttributeError:
             level_str = str(level)
         
