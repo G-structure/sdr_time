@@ -37,7 +37,19 @@ def run_waterfall(device_args_str, sample_rate_hz, frequency_hz, gain_db):
         sdr.setGainMode(SoapySDR.SOAPY_SDR_RX, 0, False)
         sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, gain_db)
 
-        rx_stream = sdr.setupStream(SoapySDR.SOAPY_SDR_RX, SoapySDR.SOAPY_SDR_CS8, [0])
+        # Setup stream with error recovery for "stream already opened"
+        try:
+            rx_stream = sdr.setupStream(SoapySDR.SOAPY_SDR_RX, SoapySDR.SOAPY_SDR_CS8, [0])
+        except RuntimeError as e:
+            if "stream already opened" in str(e).lower():
+                print("Warning: Stream already opened on remote device. This may indicate:")
+                print("  - Another application is using the SDR")
+                print("  - Previous session was not properly closed")
+                print("  - Remote SoapyRemote server needs restart")
+                print("Please check the remote device and restart SoapyRemote if needed.")
+                raise RuntimeError(f"Cannot open stream: {e}") from e
+            else:
+                raise
         
         sdr.activateStream(rx_stream)
 
@@ -69,13 +81,13 @@ def run_waterfall(device_args_str, sample_rate_hz, frequency_hz, gain_db):
             buffer_count += 1
 
     except KeyboardInterrupt:
-        pass
-    except SoapySDR.RuntimeException as e: 
-        pass
+        print("\nWaterfall display stopped by user")
+    except RuntimeError as e: 
+        print(f"SDR Runtime error: {e}")
     except AttributeError as e: 
-        pass
+        print(f"Attribute error: {e}")
     except Exception as e:
-        pass
+        print(f"Unexpected error: {e}")
     finally:
         if sdr and rx_stream is not None:
             sdr.deactivateStream(rx_stream)
