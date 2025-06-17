@@ -97,11 +97,14 @@ class SDRStreamer:
     """Handles continuous SDR streaming in a background thread."""
     
     def __init__(self, device_args: str, sample_rate: float, frequency: float, 
-                 gain: Optional[float] = None, buffer_duration: float = 10.0):
+                 rf_gain: Optional[bool] = None, if_gain: Optional[int] = None, 
+                 bb_gain: Optional[int] = None, buffer_duration: float = 10.0):
         self.device_args = device_args
         self.sample_rate = sample_rate
         self.frequency = frequency
-        self.gain = gain
+        self.rf_gain = rf_gain  # True/False for HackRF RF amp
+        self.if_gain = if_gain  # 0-40 dB in 8 dB steps
+        self.bb_gain = bb_gain  # 0-62 dB in 2 dB steps
         
         self.buffer = CircularTimestampBuffer(buffer_duration)
         self.streaming_thread = None
@@ -158,8 +161,44 @@ class SDRStreamer:
             self.sdr.setSampleRate(SoapySDR.SOAPY_SDR_RX, 0, self.sample_rate)
             self.sdr.setFrequency(SoapySDR.SOAPY_SDR_RX, 0, self.frequency)
             
-            if self.gain is not None:
-                self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, self.gain)
+            # Set individual gain stages for HackRF
+            try:
+                # List available gain elements
+                gain_elements = self.sdr.listGains(SoapySDR.SOAPY_SDR_RX, 0)
+                print(f"Available gain elements: {gain_elements}")
+                
+                # Set RF gain (amp) - 0 or ~11 dB
+                if self.rf_gain is not None:
+                    if 'AMP' in gain_elements:
+                        rf_value = 11.0 if self.rf_gain else 0.0
+                        self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, 'AMP', rf_value)
+                        print(f"RF Gain (AMP): {rf_value} dB")
+                
+                # Set IF gain (lna) - 0 to 40 dB in 8 dB steps
+                if self.if_gain is not None:
+                    if 'LNA' in gain_elements:
+                        # Validate IF gain (must be multiple of 8, 0-40 dB)
+                        if_value = max(0, min(40, (self.if_gain // 8) * 8))
+                        self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, 'LNA', if_value)
+                        print(f"IF Gain (LNA): {if_value} dB")
+                
+                # Set baseband gain (vga) - 0 to 62 dB in 2 dB steps  
+                if self.bb_gain is not None:
+                    if 'VGA' in gain_elements:
+                        # Validate BB gain (must be multiple of 2, 0-62 dB)
+                        bb_value = max(0, min(62, (self.bb_gain // 2) * 2))
+                        self.sdr.setGain(SoapySDR.SOAPY_SDR_RX, 0, 'VGA', bb_value)
+                        print(f"Baseband Gain (VGA): {bb_value} dB")
+                        
+                # If no individual gains specified, print current gain settings
+                if all(g is None for g in [self.rf_gain, self.if_gain, self.bb_gain]):
+                    for gain_name in gain_elements:
+                        current_gain = self.sdr.getGain(SoapySDR.SOAPY_SDR_RX, 0, gain_name)
+                        print(f"Current {gain_name} gain: {current_gain} dB")
+                        
+            except Exception as gain_error:
+                print(f"Warning: Could not set individual gains: {gain_error}")
+                print("Falling back to automatic gain distribution")
             
             actual_rate = self.sdr.getSampleRate(SoapySDR.SOAPY_SDR_RX, 0)
             print(f"Actual sample rate: {actual_rate/1e6:.3f} MSPS")
@@ -263,12 +302,23 @@ def main():
     
     parser.add_argument("--args", type=str, default="driver=hackrf",
                        help="SoapySDR device arguments")
-    parser.add_argument("--rate", type=float, default=10e6,
+    parser.add_argument("--rate", type=float, default=20e6,
                        help="Sample rate in Hz")
     parser.add_argument("--freq", type=float, default=100e6,
                        help="Center frequency in Hz")
-    parser.add_argument("--gain", type=float, default=20,
-                       help="RX gain in dB")
+    # Individual HackRF gain controls
+    parser.add_argument("--rf-gain", action='store_true', default=None,
+                       help="Enable RF amplifier (~11 dB) - HackRF only")
+    parser.add_argument("--no-rf-gain", action='store_true', 
+                       help="Disable RF amplifier (0 dB) - HackRF only")
+    parser.add_argument("--if-gain", type=int, default=None, metavar='DB',
+                       help="IF/LNA gain in dB (0-40 in 8dB steps) - HackRF only")
+    parser.add_argument("--bb-gain", type=int, default=None, metavar='DB', 
+                       help="Baseband/VGA gain in dB (0-62 in 2dB steps) - HackRF only")
+    
+    # Backward compatibility
+    parser.add_argument("--gain", type=float, default=None,
+                       help="Overall RX gain in dB (legacy - use individual controls for HackRF)")
     parser.add_argument("--buffer-duration", type=float, default=10.0,
                        help="Buffer duration in seconds")
     parser.add_argument("--task-duration", type=float, default=1.0,
@@ -288,7 +338,9 @@ def main():
     print(f"Device: {args.args}")
     print(f"Sample Rate: {args.rate/1e6:.3f} MSPS")
     print(f"Frequency: {args.freq/1e6:.3f} MHz")
-    print(f"Gain: {args.gain} dB")
+    print(f"RF Gain: {args.rf_gain}")
+    print(f"IF Gain: {args.if_gain} dB")
+    print(f"Baseband Gain: {args.bb_gain} dB")
     print(f"Buffer Duration: {args.buffer_duration} seconds")
     print(f"Task Duration: {args.task_duration} seconds")
     print()
@@ -298,7 +350,9 @@ def main():
         device_args=args.args,
         sample_rate=args.rate,
         frequency=args.freq,
-        gain=args.gain,
+        rf_gain=args.rf_gain,
+        if_gain=args.if_gain,
+        bb_gain=args.bb_gain,
         buffer_duration=args.buffer_duration
     )
     
