@@ -271,7 +271,8 @@ class SDRStreamer:
 
 
 def generate_spectrogram(samples: np.ndarray, sample_rate: float, 
-                        title: str = "Spectrogram") -> None:
+                        title: str = "Spectrogram", fft_size: int = None,
+                        fft_overlap: int = None, fft_window: str = 'hanning') -> None:
     """Generate and display spectrogram using Kitty graphics."""
     if len(samples) == 0:
         print("No samples to generate spectrogram")
@@ -282,14 +283,45 @@ def generate_spectrogram(samples: np.ndarray, sample_rate: float,
         return
     
     # Calculate spectrogram parameters
-    nperseg = min(1024, len(samples) // 4)  # FFT size
-    if nperseg < 64:
-        nperseg = 64
+    if fft_size is None:
+        nperseg = min(1024, len(samples) // 4)  # FFT size
+        if nperseg < 64:
+            nperseg = 64
+    else:
+        nperseg = fft_size
+        # Ensure FFT size doesn't exceed sample count
+        if nperseg > len(samples):
+            nperseg = len(samples)
+            print(f"Warning: FFT size reduced to {nperseg} (limited by sample count)")
+    
+    # Set overlap
+    if fft_overlap is None:
+        noverlap = nperseg // 2  # Default 50% overlap
+    else:
+        noverlap = min(fft_overlap, nperseg - 1)  # Ensure overlap < FFT size
+        if noverlap != fft_overlap:
+            print(f"Warning: FFT overlap reduced to {noverlap} (must be < FFT size)")
+    
+    print(f"Spectrogram settings: FFT size={nperseg}, overlap={noverlap}, window={fft_window}")
     
     # Generate spectrogram
     plt.figure(figsize=(12, 8))
-    plt.specgram(samples, NFFT=nperseg, Fs=sample_rate, cmap='viridis')
-    plt.colorbar(label='Power (dB)')
+    
+    # Use scipy.signal.spectrogram for more control over parameters
+    from scipy import signal
+    frequencies, times, Sxx = signal.spectrogram(
+        samples, 
+        fs=sample_rate,
+        window=fft_window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        scaling='density'
+    )
+    
+    # Convert to dB and plot
+    Sxx_db = 10 * np.log10(Sxx + 1e-20)  # Add small epsilon to avoid log(0)
+    plt.pcolormesh(times, frequencies, Sxx_db, cmap='viridis', shading='gouraud')
+    plt.colorbar(label='Power Spectral Density (dB/Hz)')
     plt.xlabel('Time (s)')
     plt.ylabel('Frequency (Hz)')
     plt.title(f'{title}\nSamples: {len(samples)}, Duration: {len(samples)/sample_rate:.3f}s')
@@ -337,6 +369,15 @@ def main():
                        help="Task duration in seconds")
     parser.add_argument("--debug", action='store_true',
                        help="Enable debug output")
+    
+    # FFT/Spectrogram settings
+    parser.add_argument("--fft-size", type=int, default=None, metavar='N',
+                       help="FFT size for spectrogram (default: auto-calculated)")
+    parser.add_argument("--fft-overlap", type=int, default=None, metavar='N', 
+                       help="FFT overlap in samples (default: 50%% of FFT size)")
+    parser.add_argument("--fft-window", type=str, default='hanning',
+                       choices=['hanning', 'hamming', 'blackman', 'bartlett', 'kaiser', 'tukey'],
+                       help="FFT window function (default: hanning)")
     
     args = parser.parse_args()
     
@@ -387,6 +428,21 @@ def main():
         
     print(f"Buffer Duration: {args.buffer_duration} seconds")
     print(f"Task Duration: {args.task_duration} seconds")
+    print()
+    
+    # Display FFT settings
+    print("=== FFT/Spectrogram Settings ===")
+    if args.fft_size is not None:
+        print(f"FFT Size: {args.fft_size} samples")
+    else:
+        print("FFT Size: Auto-calculated")
+    
+    if args.fft_overlap is not None:
+        print(f"FFT Overlap: {args.fft_overlap} samples")
+    else:
+        print("FFT Overlap: 50% of FFT size")
+    
+    print(f"FFT Window: {args.fft_window}")
     print()
     
     # Create and start streamer
@@ -461,7 +517,10 @@ def main():
         generate_spectrogram(
             samples, 
             args.rate, 
-            f"Timed Capture ({args.freq/1e6:.1f} MHz)"
+            f"Timed Capture ({args.freq/1e6:.1f} MHz)",
+            fft_size=args.fft_size,
+            fft_overlap=args.fft_overlap,
+            fft_window=args.fft_window
         )
         
         print("=== Task Complete ===")
