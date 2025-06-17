@@ -4,7 +4,7 @@
 import argparse
 import sys
 import json
-from ..core.config import load_model_config
+from ..core.config import load_model_config, check_quantization_support
 from ..models.mixtral_wrapper import MixtralWrapper
 from ..analysis.expert_usage import ExpertUsageAnalyzer
 
@@ -56,14 +56,49 @@ def main():
     
     parser.add_argument('--preset', type=str, help='Configuration preset to use')
     parser.add_argument('--model', type=str, help='Model name')
-    parser.add_argument('--device', type=str, help='Device to use')
-    parser.add_argument('--load-in-4bit', action='store_true', help='Load in 4-bit precision')
+    parser.add_argument('--device', type=str, help='Device to use (cuda, cpu, auto)', choices=['cuda', 'cpu', 'auto'], default='auto')
+    parser.add_argument('--load-in-4bit', action='store_true', help='Load in 4-bit precision (requires compatible bitsandbytes)')
+    parser.add_argument('--load-in-8bit', action='store_true', help='Load in 8-bit precision (requires compatible bitsandbytes)')
     parser.add_argument('--prompts', type=str, nargs='+', help='Prompts to analyze')
     parser.add_argument('--prompts-file', type=str, help='File containing prompts (one per line)')
     parser.add_argument('--output', type=str, help='Output file for results')
     parser.add_argument('--compare', action='store_true', help='Compare routing patterns across prompts')
+    parser.add_argument('--check-system', action='store_true', help='Check system capabilities for quantization')
     
     args = parser.parse_args()
+    
+    # Handle system check
+    if args.check_system:
+        import torch
+        print("=== System Capabilities Check ===")
+        print(f"PyTorch version: {torch.__version__}")
+        print(f"CUDA available: {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"CUDA version: {torch.version.cuda}")
+            print(f"GPU count: {torch.cuda.device_count()}")
+            for i in range(torch.cuda.device_count()):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+        
+        print("\nQuantization Support:")
+        quant_support = check_quantization_support()
+        print(f"  bitsandbytes available: {quant_support['bitsandbytes_available']}")
+        if quant_support['error']:
+            print(f"  Error: {quant_support['error']}")
+            if quant_support['suggestion']:
+                print(f"  Suggestion: {quant_support['suggestion']}")
+        else:
+            print(f"  CUDA support: {quant_support['cuda_support']}")
+            print(f"  CPU support: {quant_support['cpu_support']}")
+        
+        print("\nRecommendations:")
+        if not quant_support['bitsandbytes_available'] or quant_support['error']:
+            print("  - Use full precision models (remove --load-in-4bit/--load-in-8bit)")
+            print("  - For CUDA support: Need bitsandbytes compiled with CUDA")
+            print("  - For CPU support: Need intel_extension_for_pytorch for Intel CPUs")
+        else:
+            print("  - Quantization should work on this system")
+        
+        return 0
     
     # Get prompts
     prompts = []
@@ -85,10 +120,50 @@ def main():
     config_kwargs = {}
     if args.model:
         config_kwargs['model_name'] = args.model
-    if args.device:
+    
+    # Check quantization availability before setting flags
+    quantization_requested = args.load_in_4bit or args.load_in_8bit
+    if quantization_requested:
+        print(f"Quantization requested: 4-bit={args.load_in_4bit}, 8-bit={args.load_in_8bit}")
+        try:
+            quant_support = check_quantization_support()
+            print(f"Quantization check result: available={quant_support['bitsandbytes_available']}, error={quant_support['error']}")
+            
+            if not quant_support['bitsandbytes_available'] or quant_support['error']:
+                print(f"Warning: Quantization requested but not available")
+                print(f"  Reason: {quant_support['error']}")
+                if quant_support['suggestion']:
+                    print(f"  Suggestion: {quant_support['suggestion']}")
+                print(f"  Continuing with full precision...")
+                print(f"  (Use --check-system to see detailed capabilities)")
+                # DO NOT set quantization flags - leave them out of config_kwargs
+            else:
+                print(f"Quantization is available, enabling it")
+                if args.load_in_4bit:
+                    config_kwargs['load_in_4bit'] = True
+                if args.load_in_8bit:
+                    config_kwargs['load_in_8bit'] = True
+        except Exception as e:
+            print(f"Error checking quantization support: {e}")
+            print(f"Disabling quantization as a safety measure")
+            # DO NOT set quantization flags
+    else:
+        print(f"No quantization requested")
+    
+    # Handle device detection
+    import torch
+    if args.device == 'auto':
+        if torch.cuda.is_available():
+            config_kwargs['device'] = 'cuda'
+            print(f"Auto-detected CUDA device")
+        else:
+            config_kwargs['device'] = 'cpu'
+            print(f"CUDA not available, using CPU")
+    else:
         config_kwargs['device'] = args.device
-    if args.load_in_4bit:
-        config_kwargs['load_in_4bit'] = True
+        if args.device == 'cuda' and not torch.cuda.is_available():
+            print(f"Warning: CUDA requested but not available, using CPU instead")
+            config_kwargs['device'] = 'cpu'
     
     try:
         config = load_model_config(preset=args.preset, **config_kwargs)

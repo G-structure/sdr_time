@@ -5,6 +5,47 @@ from typing import Optional, Dict, Any, Union
 import torch
 
 
+def check_quantization_support():
+    """Check what quantization options are available on this system."""
+    support_info = {
+        'bitsandbytes_available': False,
+        'cuda_support': False,
+        'cpu_support': False,
+        'error': None,
+        'suggestion': None
+    }
+    
+    try:
+        import bitsandbytes as bnb
+        support_info['bitsandbytes_available'] = True
+        
+        # Try to actually test if bitsandbytes works
+        try:
+            from bitsandbytes.functional import quantize_4bit
+            import torch
+            # Try to quantize a small tensor to test if it works
+            test_tensor = torch.randn(2, 2)
+            quantize_4bit(test_tensor)
+            # If we get here, it works
+            support_info['cuda_support'] = torch.cuda.is_available()
+            support_info['cpu_support'] = True
+        except Exception as e:
+            support_info['error'] = f"bitsandbytes test failed: {str(e)}"
+            if "available_devices = None" in str(e):
+                support_info['suggestion'] = "bitsandbytes not compiled for this platform. For CPU: need intel_extension_for_pytorch. For CUDA: need CUDA-compiled bitsandbytes."
+            else:
+                support_info['suggestion'] = "bitsandbytes is installed but not compatible with this system"
+            
+    except ImportError:
+        support_info['error'] = "bitsandbytes not installed"
+        support_info['suggestion'] = "Install bitsandbytes to enable quantization"
+    except Exception as e:
+        support_info['error'] = f"bitsandbytes error: {e}"
+        support_info['suggestion'] = "bitsandbytes may not be compatible with this system configuration"
+    
+    return support_info
+
+
 @dataclass
 class MixtralConfig:
     """Configuration for Mixtral model loading and inference."""

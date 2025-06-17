@@ -7,6 +7,33 @@ import numpy as np
 from dataclasses import dataclass
 
 
+def check_bitsandbytes_availability():
+    """Check if bitsandbytes is available and supports the current system."""
+    try:
+        import bitsandbytes as bnb
+        # Try to actually test bitsandbytes functionality by creating a simple quantized tensor
+        import torch
+        
+        # Test if any backend is actually supported
+        try:
+            # This will fail if no supported backend is available
+            from bitsandbytes.functional import quantize_4bit
+            # Try to quantize a small tensor to test if it works
+            test_tensor = torch.randn(10, 10)
+            quantize_4bit(test_tensor)
+            return True
+        except Exception as e:
+            print(f"Debug: bitsandbytes test failed: {e}")
+            return False
+            
+    except ImportError:
+        return False
+    except Exception as e:
+        # bitsandbytes is installed but might not support this system
+        print(f"Warning: bitsandbytes is installed but not working: {e}")
+        return False
+
+
 @dataclass
 class MixtralResponse:
     """Response from Mixtral model including router information."""
@@ -48,6 +75,21 @@ class MixtralClient:
         print(f"Device: {self.device}")
         print(f"Data type: {self.torch_dtype}")
         
+        # Check bitsandbytes availability
+        bnb_available = check_bitsandbytes_availability()
+        print(f"Bitsandbytes availability check: {bnb_available}")
+        
+        if (load_in_8bit or load_in_4bit) and not bnb_available:
+            print("Warning: Quantization requested but bitsandbytes is not available or compatible.")
+            print("Falling back to full precision loading.")
+            load_in_8bit = False
+            load_in_4bit = False
+        
+        if (load_in_8bit or load_in_4bit):
+            print(f"Quantization will be attempted: 8-bit={load_in_8bit}, 4-bit={load_in_4bit}")
+        else:
+            print("Loading in full precision (no quantization)")
+        
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
@@ -60,10 +102,14 @@ class MixtralClient:
             "trust_remote_code": True,
         }
         
-        if load_in_8bit:
-            model_kwargs["load_in_8bit"] = True
-        elif load_in_4bit:
-            model_kwargs["load_in_4bit"] = True
+        # Only add quantization if bitsandbytes is available
+        if bnb_available:
+            if load_in_8bit:
+                model_kwargs["load_in_8bit"] = True
+                print("Loading with 8-bit quantization")
+            elif load_in_4bit:
+                model_kwargs["load_in_4bit"] = True
+                print("Loading with 4-bit quantization")
         
         # Load config first to enable router logits
         config = AutoConfig.from_pretrained(model_name)

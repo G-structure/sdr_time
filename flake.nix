@@ -1,6 +1,21 @@
 {
   description = "SDR Python Development Environment (Simple)";
 
+  ########################################################################
+  # Binary cache: cuda‑maintainers (pre‑built CUDA & PyTorch derivations)
+  ########################################################################
+  nixConfig = {
+    # where to download substitutes from
+    extra-substituters = [
+      "https://cuda-maintainers.cachix.org"
+    ];
+
+    # signature that binaries from the cache are signed with
+    extra-trusted-public-keys = [
+      "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
@@ -9,7 +24,11 @@
     devShells = {
       x86_64-linux.default = 
         let
-          pkgs = nixpkgs.legacyPackages.x86_64-linux;
+          pkgs = import nixpkgs { 
+            system = "x86_64-linux"; 
+            config.allowUnfree = true; 
+            config.cudaSupport = true;
+          };
           
           # Create Python environment with SDR packages
           pythonEnv = pkgs.python312.withPackages (ps: with ps; [
@@ -23,6 +42,7 @@
             tokenizers
             accelerate
             datasets
+            bitsandbytes
           ]);
           
         in pkgs.mkShell {
@@ -134,6 +154,7 @@
             echo "Available packages (src/):"
             echo "  - sdr_experiments (main SDR tools)"
             echo "  - kitty_graphics (terminal graphics)"
+            echo "  - llm_sidechannel (LLM MoE analysis)"
             echo ""
             echo "Ready to run:"
             echo "  sdr-verify-ptp --help"
@@ -142,6 +163,8 @@
             echo "  sdr-kitty-test"
             echo "  sdr-timed-capture --help"
             echo "  sdr-ptp-sync --help"
+            echo "  llm-query --help"
+            echo "  llm-analyze-moe --help"
             echo ""
             
             # Unset PYTHONPATH to avoid conflicts
@@ -152,7 +175,10 @@
 
       aarch64-linux.default = 
         let
-          pkgs = nixpkgs.legacyPackages.aarch64-linux;
+          pkgs = import nixpkgs { 
+            system = "aarch64-linux"; 
+            config.allowUnfree = true; 
+          };
           
           # Create Python environment with SDR packages
           pythonEnv = pkgs.python312.withPackages (ps: with ps; [
@@ -166,6 +192,7 @@
             tokenizers
             accelerate
             datasets
+            bitsandbytes
           ]);
           
         in pkgs.mkShell {
@@ -275,6 +302,7 @@
             echo "Available packages (src/):"
             echo "  - sdr_experiments (main SDR tools)"
             echo "  - kitty_graphics (terminal graphics)"
+            echo "  - llm_sidechannel (LLM MoE analysis)"
             echo ""
             echo "Ready to run:"
             echo "  sdr-verify-ptp --help"
@@ -283,6 +311,8 @@
             echo "  sdr-kitty-test"
             echo "  sdr-timed-capture --help"
             echo "  sdr-ptp-sync --help"
+            echo "  llm-query --help"
+            echo "  llm-analyze-moe --help"
             echo ""
             
             # Unset PYTHONPATH to avoid conflicts
@@ -293,7 +323,10 @@
 
       aarch64-darwin.default = 
         let
-          pkgs = nixpkgs.legacyPackages.aarch64-darwin;
+          pkgs = import nixpkgs { 
+            system = "aarch64-darwin"; 
+            config.allowUnfree = true; 
+          };
           
           # Create Python environment with SDR packages
           pythonEnv = pkgs.python312.withPackages (ps: with ps; [
@@ -307,6 +340,7 @@
             tokenizers
             accelerate
             datasets
+            bitsandbytes
           ]);
           
         in pkgs.mkShell {
@@ -379,6 +413,14 @@
               fi
               
               ${pythonEnv}/bin/python "$PYTHON_SCRIPT_PATH" "$@"
+            '')
+            (pkgs.writeScriptBin "llm-query" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.query "$@"
+            '')
+            (pkgs.writeScriptBin "llm-analyze-moe" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.analyze_moe "$@"
             '')
           ];
 
@@ -406,6 +448,7 @@
             echo "Available packages (src/):"
             echo "  - sdr_experiments (main SDR tools)"
             echo "  - kitty_graphics (terminal graphics)"
+            echo "  - llm_sidechannel (LLM MoE analysis)"
             echo ""
             echo "Available GUI tools:"
             echo "  - gqrx (SDR receiver)"
@@ -417,6 +460,8 @@
             echo "  sdr-kitty-test"
             echo "  sdr-timed-capture --help"
             echo "  sdr-ptp-sync --help"
+            echo "  llm-query --help"
+            echo "  llm-analyze-moe --help"
             echo "  gqrx"
             echo ""
             
@@ -428,7 +473,10 @@
 
       x86_64-darwin.default = 
         let
-          pkgs = nixpkgs.legacyPackages.x86_64-darwin;
+          pkgs = import nixpkgs { 
+            system = "x86_64-darwin"; 
+            config.allowUnfree = true; 
+          };
           
           # Create Python environment with SDR packages
           pythonEnv = pkgs.python312.withPackages (ps: with ps; [
@@ -442,6 +490,7 @@
             tokenizers
             accelerate
             datasets
+            bitsandbytes
           ]);
           
         in pkgs.mkShell {
@@ -515,6 +564,14 @@
               
               ${pythonEnv}/bin/python "$PYTHON_SCRIPT_PATH" "$@"
             '')
+            (pkgs.writeScriptBin "llm-query" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.query "$@"
+            '')
+            (pkgs.writeScriptBin "llm-analyze-moe" ''
+              #!${pkgs.bash}/bin/bash
+              ${pythonEnv}/bin/python -m llm_sidechannel.tools.analyze_moe "$@"
+            '')
           ];
 
           env = {
@@ -541,6 +598,7 @@
             echo "Available packages (src/):"
             echo "  - sdr_experiments (main SDR tools)"
             echo "  - kitty_graphics (terminal graphics)"
+            echo "  - llm_sidechannel (LLM MoE analysis)"
             echo ""
             echo "Available GUI tools:"
             echo "  - gqrx (SDR receiver)"
@@ -552,6 +610,8 @@
             echo "  sdr-kitty-test"
             echo "  sdr-timed-capture --help"
             echo "  sdr-ptp-sync --help"
+            echo "  llm-query --help"
+            echo "  llm-analyze-moe --help"
             echo "  gqrx"
             echo ""
             
