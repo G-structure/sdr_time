@@ -102,7 +102,7 @@ class PTPManager:
             time.sleep(1)
             
             # Start ptp4l as master with simple config
-            cmd = ['ptp4l', '-i', interface, '-m', '-s', '-l', '6']
+            cmd = ['ptp4l', '-i', interface, '-m', '-l', '6']
             print(f"Starting PTP master: {' '.join(cmd)}")
             
             # Start in background
@@ -172,7 +172,8 @@ class PTPManager:
             'ptp4l_running': self._is_process_running('ptp4l'),
             'phc2sys_running': self._is_process_running('phc2sys'),
             'sync_offset': None,
-            'master_identified': False
+            'master_identified': False,
+            'port_state': 'UNKNOWN'
         }
         
         # Try to get sync status from pmc (PTP Management Client)
@@ -185,11 +186,24 @@ class PTPManager:
                     if 'offsetFromMaster' in line:
                         # Extract offset value
                         import re
-                        match = re.search(r'offsetFromMaster\s+(-?\d+)', line)
+                        match = re.search(r'offsetFromMaster\\s+(-?\\d+)', line)
                         if match:
                             status['sync_offset'] = int(match.group(1))
                     elif 'grandmasterIdentity' in line:
-                        status['master_identified'] = True
+                        if '000000.0000.000000' not in line:
+                            status['master_identified'] = True
+            
+            # Also get port state for more detailed status
+            result_port = subprocess.run(['pmc', '-u', '-b', '0', 'GET PORT_DATA_SET'],
+                                           capture_output=True, text=True, timeout=5)
+            if result_port.returncode == 0:
+                for line in result_port.stdout.split('\n'):
+                    if 'portState' in line:
+                        state = line.strip().split()[-1]
+                        status['port_state'] = state
+                        if state in ['MASTER', 'SLAVE']:
+                            status['master_identified'] = True
+                        break
         except Exception:
             pass
         
@@ -323,6 +337,7 @@ def main():
         print("=== PTP Status ===")
         print(f"ptp4l running: {status['ptp4l_running']}")
         print(f"phc2sys running: {status['phc2sys_running']}")
+        print(f"PTP Port State: {status['port_state']}")
         print(f"Master identified: {status['master_identified']}")
         if status['sync_offset'] is not None:
             print(f"Sync offset: {status['sync_offset']} ns")
@@ -353,14 +368,13 @@ def main():
                 try:
                     tai_time, realtime, monotonic = get_high_precision_time()
                     print(f"\r"
-                          f"ptp4l: {'ON' if status['ptp4l_running'] else 'OFF'} | "
-                          f"Offset: {status['sync_offset'] or 'N/A'} ns | "
-                          f"TAI: {tai_time} | "
-                          f"Real: {realtime}", end='', flush=True)
+                          f"State: {status.get('port_state', 'N/A'):<10} | "
+                          f"Offset: {(str(status['sync_offset']) + ' ns') if status['sync_offset'] is not None else 'N/A':<15} | "
+                          f"TAI: {tai_time}", end='', flush=True)
                 except Exception:
                     print(f"\r"
-                          f"ptp4l: {'ON' if status['ptp4l_running'] else 'OFF'} | "
-                          f"Offset: {status['sync_offset'] or 'N/A'} ns | "
+                          f"State: {status.get('port_state', 'N/A'):<10} | "
+                          f"Offset: {(str(status['sync_offset']) + ' ns') if status['sync_offset'] is not None else 'N/A':<15} | "
                           f"Clock access error", end='', flush=True)
                 time.sleep(1)
         except KeyboardInterrupt:
